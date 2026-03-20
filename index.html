@@ -7,222 +7,248 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500&family=Roboto:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap');
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
 :root {
-  --dt-bg:        #1e1e1e;
-  --dt-panel:     #252526;
-  --dt-panel2:    #2d2d2d;
-  --dt-border:    #3c3c3c;
-  --dt-border2:   #555;
-  --dt-blue:      #4e9bde;
-  --dt-blue-dim:  #1e3a5f;
-  --dt-yellow:    #d4b44a;
-  --dt-green:     #4ec94e;
-  --dt-red:       #e06c6c;
-  --dt-orange:    #ce9178;
-  --dt-purple:    #c586c0;
-  --dt-text:      #ccc;
-  --dt-text-dim:  #858585;
-  --dt-text-hi:   #d4d4d4;
-  --dt-input-bg:  #3c3c3c;
-  --dt-select:    rgba(78,155,222,0.15);
-  --mono: 'Roboto Mono', 'Consolas', monospace;
-  --sans: 'Roboto', system-ui, sans-serif;
+  --bg:        #1e1e1e;
+  --surface:   #252526;
+  --surface2:  #2d2d2d;
+  --surface3:  #333333;
+  --border:    #3c3c3c;
+  --border2:   #4e4e4e;
+  --blue:      #4e9bde;
+  --blue-bg:   #1a3a5c;
+  --green:     #4ec94e;
+  --green-bg:  #1a3a1a;
+  --red:       #e06c6c;
+  --yellow:    #d4b44a;
+  --orange:    #ce9178;
+  --text:      #cccccc;
+  --text-dim:  #858585;
+  --text-hi:   #e8e8e8;
+  --mono:      'Roboto Mono', 'Consolas', monospace;
+  --sans:      'Inter', system-ui, sans-serif;
+  --radius:    4px;
 }
 
-html, body {
-  height: 100%;
-  background: var(--dt-bg);
-  color: var(--dt-text);
+html { height: 100%; }
+
+body {
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
   font-family: var(--sans);
   font-size: 13px;
   line-height: 1.5;
 }
 
-/* ── Layout: DevTools-style two-panel ── */
-.shell {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  overflow: hidden;
+/* ── Page shell ── */
+.page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 40px 24px 80px;
 }
 
-/* Top toolbar */
-.toolbar {
-  background: var(--dt-panel);
-  border-bottom: 1px solid var(--dt-border);
-  padding: 0 12px;
+/* ── Header ── */
+.header {
+  margin-bottom: 32px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
-  gap: 0;
-  height: 36px;
-  flex-shrink: 0;
+  justify-content: space-between;
 }
 
-.toolbar-brand {
+.header-left {}
+
+.app-name {
   font-family: var(--mono);
-  font-size: 11px;
-  color: var(--dt-text-dim);
-  margin-right: 20px;
-  letter-spacing: 0.03em;
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-bottom: 4px;
 }
 
-.toolbar-brand span { color: var(--dt-blue); }
+.app-name span { color: var(--blue); }
 
-.tab-bar {
-  display: flex;
-  height: 100%;
-  align-items: flex-end;
+h1 {
+  font-family: var(--sans);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text-hi);
+  letter-spacing: -0.3px;
 }
 
-.tb-tab {
-  padding: 0 16px;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  font-size: 12px;
-  color: var(--dt-text-dim);
-  cursor: pointer;
-  border-top: 2px solid transparent;
-  position: relative;
-  white-space: nowrap;
-  user-select: none;
-  gap: 6px;
-}
-
-.tb-tab:hover { color: var(--dt-text-hi); }
-
-.tb-tab.active {
-  color: var(--dt-text-hi);
-  border-top-color: var(--dt-blue);
-  background: var(--dt-bg);
-}
-
-.tb-tab .dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: var(--dt-border2);
-}
-
-.tb-tab.active .dot,
-.tb-tab.done .dot { background: var(--dt-green); }
-
-/* Main body: left panel + right console */
-.body {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-}
-
-/* Left: form panel */
-.panel-left {
-  width: 420px;
-  flex-shrink: 0;
-  border-right: 1px solid var(--dt-border);
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-}
-
-/* Right: console panel */
-.panel-right {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  min-width: 0;
-}
-
-/* ── Section headers (like DevTools accordion) ── */
-.section {
-  border-bottom: 1px solid var(--dt-border);
-}
-
-.section-head {
-  padding: 6px 10px;
-  background: var(--dt-panel);
-  border-bottom: 1px solid var(--dt-border);
+.version-badge {
   font-family: var(--mono);
-  font-size: 11px;
-  color: var(--dt-text-dim);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  user-select: none;
-  cursor: pointer;
-  letter-spacing: 0.05em;
-}
-
-.section-head .arrow {
-  font-size: 8px;
-  transition: transform 0.15s;
-  display: inline-block;
-}
-
-.section-head.open .arrow { transform: rotate(90deg); }
-
-.section-body {
-  padding: 12px;
-  background: var(--dt-bg);
-}
-
-/* ── Source picker (tabs inside section) ── */
-.src-tabs {
-  display: flex;
-  gap: 0;
-  border: 1px solid var(--dt-border);
+  font-size: 10px;
+  padding: 3px 8px;
+  border: 1px solid var(--border2);
   border-radius: 2px;
-  overflow: hidden;
-  margin-bottom: 10px;
+  color: var(--text-dim);
 }
 
-.src-tab {
+/* ── Steps row ── */
+.steps {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 28px;
+}
+
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: default;
+  position: relative;
   flex: 1;
-  padding: 6px 10px;
+}
+
+.step-item:not(:last-child) { border-right: none; }
+.step-item:first-child { border-radius: var(--radius) 0 0 var(--radius); }
+.step-item:last-child  { border-radius: 0 var(--radius) var(--radius) 0; border-right: 1px solid var(--border); }
+
+.step-item.active { background: var(--blue-bg); border-color: var(--blue); }
+.step-item.done   { background: var(--green-bg); border-color: var(--green); }
+
+/* keep borders continuous */
+.step-item.active + .step-item { border-left-color: var(--blue); }
+.step-item.done   + .step-item { border-left-color: var(--green); }
+
+.step-num {
+  font-family: var(--mono);
+  font-size: 10px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.step-item.active .step-num { border-color: var(--blue); color: var(--blue); }
+.step-item.done   .step-num { border-color: var(--green); color: var(--green); background: var(--green-bg); }
+
+.step-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.step-item.active .step-label { color: var(--blue); }
+.step-item.done   .step-label { color: var(--green); }
+
+/* ── Card ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+
+.card-head {
+  padding: 12px 16px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-title {
   font-family: var(--mono);
   font-size: 11px;
-  color: var(--dt-text-dim);
-  background: var(--dt-panel);
-  border: none;
-  cursor: pointer;
-  text-align: center;
-  transition: all 0.1s;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.src-tab:first-child { border-right: 1px solid var(--dt-border); }
-.src-tab:hover { color: var(--dt-text); background: var(--dt-panel2); }
-.src-tab.active { color: var(--dt-blue); background: var(--dt-blue-dim); }
+.card-title .dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--border2);
+}
 
-.tab-content { display: none; }
-.tab-content.active { display: block; }
+.card-title .dot.blue   { background: var(--blue); }
+.card-title .dot.green  { background: var(--green); }
+.card-title .dot.yellow { background: var(--yellow); }
 
-/* ── URL input row ── */
+.card-body {
+  padding: 20px;
+}
+
+/* ── Source switcher ── */
+.src-switch {
+  display: flex;
+  background: var(--surface3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 3px;
+  gap: 3px;
+  margin-bottom: 16px;
+}
+
+.src-btn {
+  flex: 1;
+  padding: 7px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 2px;
+  color: var(--text-dim);
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.src-btn:hover { color: var(--text); background: var(--surface2); }
+
+.src-btn.active {
+  background: var(--blue-bg);
+  color: var(--blue);
+  border: 1px solid rgba(78,155,222,0.3);
+}
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ── URL row ── */
 .url-row {
   display: flex;
-  gap: 6px;
-  align-items: center;
+  gap: 8px;
 }
 
-.url-row input { flex: 1; }
+.url-row input { flex: 1; min-width: 0; }
 
-/* ── Upload drop zone ── */
+/* ── Drop zone ── */
 .drop-zone {
-  border: 1px dashed var(--dt-border2);
-  border-radius: 2px;
-  padding: 20px;
+  border: 1px dashed var(--border2);
+  border-radius: var(--radius);
+  padding: 28px 20px;
   text-align: center;
   cursor: pointer;
   position: relative;
   transition: all 0.15s;
-  background: var(--dt-panel);
+  background: var(--surface3);
 }
 
 .drop-zone:hover, .drop-zone.drag-over {
-  border-color: var(--dt-blue);
-  background: var(--dt-blue-dim);
+  border-color: var(--blue);
+  background: var(--blue-bg);
 }
 
 .drop-zone input[type=file] {
@@ -230,390 +256,490 @@ html, body {
   opacity: 0; cursor: pointer;
 }
 
-.drop-zone .dz-icon {
+.dz-icon { font-size: 24px; margin-bottom: 8px; }
+.dz-title { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+.dz-sub   { font-size: 11px; color: var(--text-dim); font-family: var(--mono); }
+
+.drop-zone.loaded { border-color: var(--green); border-style: solid; background: var(--green-bg); }
+.drop-zone.loaded .dz-title { color: var(--green); }
+
+/* ── Hint text ── */
+.hint {
   font-family: var(--mono);
   font-size: 11px;
-  color: var(--dt-text-dim);
+  color: var(--text-dim);
+  margin-top: 8px;
+  line-height: 1.6;
+  padding: 8px 10px;
+  background: var(--surface3);
+  border-radius: var(--radius);
+  border-left: 2px solid var(--yellow);
 }
 
-.drop-zone.loaded {
-  border-color: var(--dt-green);
-  border-style: solid;
-}
+.hint strong { color: var(--yellow); font-weight: 400; }
 
-.drop-zone.loaded .dz-icon { color: var(--dt-green); }
+/* ── Status ── */
+.status {
+  display: none;
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  margin-top: 10px;
+  border-left: 3px solid;
+  line-height: 1.5;
+}
+.status.visible { display: block; }
+.status.ok   { border-color: var(--green);  color: var(--green);  background: var(--green-bg); }
+.status.err  { border-color: var(--red);    color: var(--red);    background: rgba(224,108,108,0.08); }
+.status.warn { border-color: var(--yellow); color: var(--yellow); background: rgba(212,180,74,0.08); }
+.status.info { border-color: var(--blue);   color: var(--blue);   background: var(--blue-bg); }
 
 /* ── Form fields ── */
-.field { margin-bottom: 10px; }
+.field { margin-bottom: 14px; }
+.field:last-child { margin-bottom: 0; }
 
 .field label {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+
+.field label .lbl-hint {
   font-family: var(--mono);
-  font-size: 11px;
-  color: var(--dt-text-dim);
-  margin-bottom: 4px;
-  letter-spacing: 0.04em;
+  font-size: 10px;
+  color: var(--border2);
+  font-weight: 400;
 }
 
 input[type=text],
 input[type=url],
 input[type=number] {
   width: 100%;
-  background: var(--dt-input-bg);
-  border: 1px solid var(--dt-border);
-  border-radius: 2px;
-  color: var(--dt-text-hi);
+  background: var(--surface3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-hi);
   font-family: var(--mono);
   font-size: 12px;
-  padding: 5px 8px;
+  padding: 8px 10px;
   outline: none;
   transition: border-color 0.15s;
 }
 
-input:focus { border-color: var(--dt-blue); }
+input:focus { border-color: var(--blue); }
+input::placeholder { color: var(--border2); }
 
 .field-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: 12px;
 }
 
-/* ── Status badge ── */
-.status {
-  display: none;
-  font-family: var(--mono);
-  font-size: 11px;
-  padding: 5px 8px;
-  border-radius: 2px;
-  margin-top: 6px;
-  border-left: 3px solid;
-}
-.status.visible { display: block; }
-.status.ok   { border-color: var(--dt-green);  color: var(--dt-green);  background: rgba(78,201,78,0.06); }
-.status.err  { border-color: var(--dt-red);    color: var(--dt-red);    background: rgba(224,108,108,0.06); }
-.status.warn { border-color: var(--dt-yellow); color: var(--dt-yellow); background: rgba(212,180,74,0.06); }
-.status.info { border-color: var(--dt-blue);   color: var(--dt-blue);   background: rgba(78,155,222,0.06); }
-
-/* ── Language chips ── */
-.lang-chips {
+/* ── Language grid ── */
+.lang-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 6px;
   margin-top: 6px;
 }
 
 .lang-chip {
   font-family: var(--mono);
   font-size: 11px;
-  padding: 2px 8px;
-  border: 1px solid var(--dt-border);
+  padding: 4px 10px;
+  border: 1px solid var(--border);
   border-radius: 2px;
   cursor: pointer;
-  background: var(--dt-panel);
-  color: var(--dt-text-dim);
+  background: var(--surface3);
+  color: var(--text-dim);
   user-select: none;
   transition: all 0.1s;
+  display: flex; align-items: center; gap: 5px;
 }
 
 .lang-chip input { display: none; }
-.lang-chip:hover { border-color: var(--dt-blue); color: var(--dt-text); }
-.lang-chip.on { border-color: var(--dt-blue); background: var(--dt-blue-dim); color: var(--dt-blue); }
+.lang-chip:hover { border-color: var(--blue); color: var(--text); }
+.lang-chip.on { border-color: var(--blue); background: var(--blue-bg); color: var(--blue); }
+.lang-chip.on::before { content: '✓ '; font-size: 10px; }
+
+/* ── Advanced toggle ── */
+.adv-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-dim);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 8px 0 0;
+  user-select: none;
+  border: none;
+  background: none;
+  font-family: var(--sans);
+}
+
+.adv-toggle:hover { color: var(--text); }
+.adv-toggle .arrow { font-size: 9px; transition: transform 0.15s; }
+.adv-toggle.open .arrow { transform: rotate(90deg); }
+
+.adv-body {
+  display: none;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.adv-body.open { display: block; }
 
 /* ── Generate button ── */
 .btn-generate {
   width: 100%;
-  padding: 8px;
-  background: var(--dt-blue);
+  padding: 11px 16px;
+  background: var(--blue);
   border: none;
-  border-radius: 2px;
+  border-radius: var(--radius);
   color: #fff;
-  font-family: var(--mono);
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  letter-spacing: 0.01em;
+}
+
+.btn-generate:hover:not(:disabled) {
+  background: #5aa8e8;
+  box-shadow: 0 0 0 3px rgba(78,155,222,0.2);
+}
+
+.btn-generate:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.btn-generate .spin {
+  display: none;
+  width: 14px; height: 14px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+.btn-generate.loading .btn-lbl { display: none; }
+.btn-generate.loading .spin    { display: block; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Small button ── */
+.btn-sm {
+  padding: 8px 14px;
+  background: var(--surface3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--sans);
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
-  transition: opacity 0.15s;
-  letter-spacing: 0.03em;
-  margin-top: 4px;
-}
-
-.btn-generate:hover:not(:disabled) { opacity: 0.85; }
-.btn-generate:disabled { opacity: 0.35; cursor: not-allowed; }
-.btn-generate.loading { opacity: 0.6; cursor: wait; }
-
-/* ── Btn small ── */
-.btn-sm {
-  padding: 5px 10px;
-  background: var(--dt-panel2);
-  border: 1px solid var(--dt-border);
-  border-radius: 2px;
-  color: var(--dt-text);
-  font-family: var(--mono);
-  font-size: 11px;
-  cursor: pointer;
   white-space: nowrap;
-  transition: all 0.1s;
-}
-
-.btn-sm:hover { border-color: var(--dt-blue); color: var(--dt-blue); }
-.btn-sm:disabled { opacity: 0.4; cursor: not-allowed; }
-
-/* ── Right panel: console header ── */
-.console-header {
-  background: var(--dt-panel);
-  border-bottom: 1px solid var(--dt-border);
-  padding: 0 12px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  transition: all 0.15s;
   flex-shrink: 0;
 }
 
-.console-title {
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--dt-text-dim);
-  letter-spacing: 0.05em;
+.btn-sm:hover:not(:disabled) { border-color: var(--blue); color: var(--blue); }
+.btn-sm:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── Success card ── */
+.success-card {
+  display: none;
+  background: var(--green-bg);
+  border: 1px solid var(--green);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin-bottom: 16px;
 }
 
-.btn-clear {
+.success-card.visible { display: flex; align-items: center; gap: 12px; }
+
+.success-icon { font-size: 20px; flex-shrink: 0; }
+
+.success-text p { font-size: 13px; font-weight: 600; color: var(--green); }
+.success-text small { font-family: var(--mono); font-size: 11px; color: var(--text-dim); }
+
+/* ── Console (collapsed by default) ── */
+.console-wrap {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.console-head {
+  padding: 8px 14px;
+  background: var(--surface2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.15s;
+}
+
+.console-head:hover { background: var(--surface3); }
+.console-head.open  { border-bottom-color: var(--border); }
+
+.console-head-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-family: var(--mono);
   font-size: 11px;
-  color: var(--dt-text-dim);
+  color: var(--text-dim);
+}
+
+.console-count {
+  background: var(--surface3);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 1px 6px;
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.console-count.has-logs { background: var(--blue-bg); border-color: var(--blue); color: var(--blue); }
+
+.btn-clear-sm {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
   background: none;
   border: none;
   cursor: pointer;
   padding: 2px 6px;
-  border-radius: 2px;
 }
 
-.btn-clear:hover { background: var(--dt-panel2); color: var(--dt-text); }
+.btn-clear-sm:hover { color: var(--text); }
 
-/* ── Console output ── */
-.console {
-  flex: 1;
+.console-body {
+  display: none;
+  max-height: 200px;
   overflow-y: auto;
-  padding: 4px 0;
-  font-family: var(--mono);
-  font-size: 12px;
-  line-height: 20px;
+  background: var(--bg);
 }
+
+.console-body.open { display: block; }
 
 .c-row {
-  padding: 1px 12px;
+  padding: 3px 14px;
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 10px;
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 18px;
   border-bottom: 1px solid transparent;
 }
 
-.c-row:hover { background: var(--dt-panel2); }
+.c-row:hover { background: var(--surface); }
+.c-row.error  { color: var(--red); }
+.c-row.warn   { color: var(--yellow); }
+.c-row.info   { color: var(--blue); }
+.c-row.success{ color: var(--green); }
 
-.c-row.error  { background: rgba(224,108,108,0.08); border-color: rgba(224,108,108,0.12); }
-.c-row.warn   { background: rgba(212,180,74,0.08);  border-color: rgba(212,180,74,0.12); }
-.c-row.info   { background: rgba(78,155,222,0.06); }
-.c-row.success{ }
+.c-icon { width: 12px; flex-shrink: 0; text-align: center; font-size: 10px; }
+.c-msg  { flex: 1; }
+.c-time { color: var(--text-dim); flex-shrink: 0; font-size: 10px; }
 
-.c-icon {
-  width: 14px;
-  flex-shrink: 0;
-  font-size: 10px;
-  text-align: center;
-}
+/* scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 0; }
 
-.c-row.error  .c-icon { color: var(--dt-red); }
-.c-row.warn   .c-icon { color: var(--dt-yellow); }
-.c-row.info   .c-icon { color: var(--dt-blue); }
-.c-row.success .c-icon { color: var(--dt-green); }
+/* divider */
+.divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
-.c-msg { color: var(--dt-text); flex: 1; }
-.c-row.error  .c-msg { color: var(--dt-red); }
-.c-row.warn   .c-msg { color: var(--dt-yellow); }
-.c-row.info   .c-msg { color: var(--dt-blue); }
-.c-row.success .c-msg { color: var(--dt-green); }
-
-.c-time {
-  font-size: 11px;
-  color: var(--dt-text-dim);
-  flex-shrink: 0;
-}
-
-/* ── Console input row ── */
-.console-input-row {
-  border-top: 1px solid var(--dt-border);
-  padding: 6px 12px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--dt-panel);
-  flex-shrink: 0;
-}
-
-.c-prompt { color: var(--dt-blue); font-family: var(--mono); font-size: 12px; }
-
-/* ── Success bar ── */
-.success-bar {
-  display: none;
-  border-top: 1px solid var(--dt-green);
-  background: rgba(78,201,78,0.08);
-  padding: 8px 12px;
-  font-family: var(--mono);
-  font-size: 12px;
-  color: var(--dt-green);
-  flex-shrink: 0;
-}
-
-.success-bar.visible { display: block; }
-
-/* Scrollbar */
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: var(--dt-bg); }
-::-webkit-scrollbar-thumb { background: var(--dt-border2); border-radius: 0; }
-::-webkit-scrollbar-thumb:hover { background: #777; }
-
-/* Responsive: stack on small screens */
-@media (max-width: 680px) {
-  .body { flex-direction: column; }
-  .panel-left { width: 100%; border-right: none; border-bottom: 1px solid var(--dt-border); max-height: 55vh; }
+@media (max-width: 560px) {
+  .field-row { grid-template-columns: 1fr; }
+  .steps { gap: 4px; }
+  .step-label { display: none; }
 }
 </style>
 </head>
 <body>
-<div class="shell">
+<div class="page">
 
-  <!-- Toolbar -->
-  <div class="toolbar">
-    <div class="toolbar-brand">help-page-<span>generator</span>.html</div>
-    <div class="tab-bar">
-      <div class="tb-tab active" id="tb1"><span class="dot"></span> Source</div>
-      <div class="tb-tab" id="tb2"><span class="dot"></span> Game Config</div>
-      <div class="tb-tab" id="tb3"><span class="dot"></span> Generate</div>
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <div class="app-name">// <span>help-page-generator</span></div>
+      <h1>Help Page Generator</h1>
+    </div>
+    <div class="version-badge">v1.2</div>
+  </div>
+
+  <!-- Steps -->
+  <div class="steps">
+    <div class="step-item active" id="step1">
+      <div class="step-num">1</div>
+      <div class="step-label">Load sheet</div>
+    </div>
+    <div class="step-item" id="step2">
+      <div class="step-num">2</div>
+      <div class="step-label">Game config</div>
+    </div>
+    <div class="step-item" id="step3">
+      <div class="step-num">3</div>
+      <div class="step-label">Generate</div>
     </div>
   </div>
 
-  <div class="body">
-
-    <!-- ── LEFT PANEL ── -->
-    <div class="panel-left">
-
-      <!-- Section 1: Source -->
-      <div class="section">
-        <div class="section-head open" data-target="sec1">
-          <span class="arrow">▶</span>
-          <span>// source</span>
-        </div>
-        <div class="section-body" id="sec1">
-          <div class="src-tabs">
-            <button class="src-tab active" onclick="switchSrc('link')">🔗 Google Sheet URL</button>
-            <button class="src-tab" onclick="switchSrc('file')">📄 Upload .xlsx</button>
-          </div>
-
-          <!-- Link tab -->
-          <div class="tab-content active" id="srcLink">
-            <div class="field">
-              <label>// sheet url</label>
-              <div class="url-row">
-                <input type="url" id="sheetUrl" placeholder="https://docs.google.com/spreadsheets/d/…" />
-                <button class="btn-sm" id="fetchBtn" onclick="fetchSheet()">Load ↗</button>
-              </div>
-            </div>
-            <div class="status" id="fetchStatus"></div>
-            <div style="margin-top:8px;font-family:var(--mono);font-size:10px;color:var(--dt-text-dim);line-height:1.6">
-              // sheet must be shared: <span style="color:var(--dt-yellow)">Anyone with link → Viewer</span>
-            </div>
-          </div>
-
-          <!-- File tab -->
-          <div class="tab-content" id="srcFile">
-            <div class="drop-zone" id="dropZone">
-              <input type="file" id="fileInput" accept=".xlsx,.xls" />
-              <div class="dz-icon" id="dzText">// drop .xlsx here or click to browse</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Section 2: Game Config -->
-      <div class="section">
-        <div class="section-head open" data-target="sec2">
-          <span class="arrow">▶</span>
-          <span>// game config</span>
-        </div>
-        <div class="section-body" id="sec2">
-          <div class="field">
-            <label>game_name <span style="color:var(--dt-text-dim)">//  from cell A2</span></label>
-            <input type="text" id="gameName" placeholder="e.g. Rocket Eruption Super Drop" />
-          </div>
-          <div class="field-row">
-            <div class="field">
-              <label>start_row</label>
-              <input type="number" id="startRow" value="196" min="1" />
-            </div>
-            <div class="field">
-              <label>end_row</label>
-              <input type="number" id="endRow" value="263" min="1" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Section 3: Advanced -->
-      <div class="section">
-        <div class="section-head" data-target="sec3">
-          <span class="arrow">▶</span>
-          <span>// advanced</span>
-        </div>
-        <div class="section-body" id="sec3" style="display:none">
-          <div class="field">
-            <label>header_row <span style="color:var(--dt-text-dim)">// row with language names</span></label>
-            <input type="number" id="headerRow" value="4" min="1" />
-          </div>
-          <div class="field">
-            <label>languages <span style="color:var(--dt-text-dim)">// detected from header row</span></label>
-            <div class="lang-chips" id="langChips">
-              <span style="color:var(--dt-text-dim);font-family:var(--mono);font-size:11px">// load sheet to detect</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Generate -->
-      <div class="section-body" style="border-bottom:1px solid var(--dt-border)">
-        <button class="btn-generate" id="generateBtn" disabled>▶ &nbsp;Generate HTML Files</button>
-      </div>
-
-    </div><!-- /panel-left -->
-
-    <!-- ── RIGHT PANEL: Console ── -->
-    <div class="panel-right">
-      <div class="console-header">
-        <span class="console-title">// console</span>
-        <button class="btn-clear" onclick="clearConsole()">⊘ clear</button>
-      </div>
-
-      <div class="console" id="console">
-        <div class="c-row info">
-          <span class="c-icon">ℹ</span>
-          <span class="c-msg">Help Page Generator ready. Load a sheet to begin.</span>
-          <span class="c-time"></span>
-        </div>
-      </div>
-
-      <div class="success-bar" id="successBar"></div>
-
-      <div class="console-input-row">
-        <span class="c-prompt">&gt;</span>
-        <span style="font-family:var(--mono);font-size:12px;color:var(--dt-text-dim)">
-          waiting for input…
-        </span>
+  <!-- Card 1: Source -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">
+        <span class="dot blue"></span>
+        Step 1 — Load translations sheet
       </div>
     </div>
+    <div class="card-body">
 
-  </div><!-- /body -->
-</div><!-- /shell -->
+      <div class="src-switch">
+        <button class="src-btn active" onclick="switchSrc('link')">🔗 Google Sheet URL</button>
+        <button class="src-btn" onclick="switchSrc('file')">📄 Upload .xlsx file</button>
+      </div>
+
+      <!-- Link -->
+      <div class="tab-panel active" id="srcLink">
+        <div class="field">
+          <label>Google Sheet URL</label>
+          <div class="url-row">
+            <input type="url" id="sheetUrl" placeholder="https://docs.google.com/spreadsheets/d/…" />
+            <button class="btn-sm" id="fetchBtn" onclick="fetchSheet()">Load ↗</button>
+          </div>
+        </div>
+        <div class="hint">
+          ⚠ The sheet must be shared as <strong>"Anyone with the link → Viewer"</strong><br>
+          In Google Sheets: Share → General access → Anyone with the link
+        </div>
+        <div class="status" id="fetchStatus"></div>
+      </div>
+
+      <!-- File -->
+      <div class="tab-panel" id="srcFile">
+        <div class="drop-zone" id="dropZone">
+          <input type="file" id="fileInput" accept=".xlsx,.xls" />
+          <div class="dz-icon">📄</div>
+          <div class="dz-title" id="dzTitle">Drop .xlsx file here or click to browse</div>
+          <div class="dz-sub">Export from Google Sheets → File → Download → Microsoft Excel (.xlsx)</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Card 2: Game config -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">
+        <span class="dot" id="dot2"></span>
+        Step 2 — Game configuration
+      </div>
+    </div>
+    <div class="card-body">
+
+      <div class="field">
+        <label>
+          Game Name
+          <span class="lbl-hint">// auto-filled from cell A2</span>
+        </label>
+        <input type="text" id="gameName" placeholder="e.g. Rocket Eruption Super Drop" />
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label>
+            Start Row
+            <span class="lbl-hint">// first help row</span>
+          </label>
+          <input type="number" id="startRow" value="196" min="1" />
+        </div>
+        <div class="field">
+          <label>
+            End Row
+            <span class="lbl-hint">// last help row</span>
+          </label>
+          <input type="number" id="endRow" value="263" min="1" />
+        </div>
+      </div>
+
+      <button class="adv-toggle" id="advToggle" onclick="toggleAdv()">
+        <span class="arrow">▶</span>
+        Advanced settings
+      </button>
+
+      <div class="adv-body" id="advBody">
+        <div class="field">
+          <label>
+            Header Row
+            <span class="lbl-hint">// row with language names like "English (EN)"</span>
+          </label>
+          <input type="number" id="headerRow" value="4" min="1" />
+        </div>
+        <div class="field">
+          <label>Languages to generate</label>
+          <div class="lang-grid" id="langGrid">
+            <span style="font-family:var(--mono);font-size:11px;color:var(--text-dim)">
+              // load sheet first to detect languages
+            </span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Success -->
+  <div class="success-card" id="successCard">
+    <div class="success-icon">✅</div>
+    <div class="success-text">
+      <p>ZIP downloaded successfully!</p>
+      <small id="successDetail"></small>
+    </div>
+  </div>
+
+  <!-- Generate button -->
+  <button class="btn-generate" id="generateBtn" disabled>
+    <span class="btn-lbl">▶ &nbsp;Generate HTML Files</span>
+    <div class="spin"></div>
+  </button>
+
+  <hr class="divider">
+
+  <!-- Console (collapsed) -->
+  <div class="console-wrap">
+    <div class="console-head" id="consoleHead" onclick="toggleConsole()">
+      <div class="console-head-left">
+        <span>// console</span>
+        <span class="console-count" id="consoleCount">0</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="btn-clear-sm" onclick="clearConsole(event)">clear</button>
+        <span style="font-size:10px;color:var(--text-dim)" id="consoleArrow">▶</span>
+      </div>
+    </div>
+    <div class="console-body" id="consoleBody"></div>
+  </div>
+
+</div><!-- /page -->
 
 <script>
-// ─── Config ────────────────────────────────────────────────
+// ─── Config ─────────────────────────────────────────────────
 const HEADER_TO_CODE = {
   'english (en)':                 'en',
   'greek (el)':                   'el',
@@ -628,11 +754,13 @@ const HEADER_TO_CODE = {
   // 'english us ct (en-us-ct)': 'en-us-ct',
 };
 
-// ─── State ─────────────────────────────────────────────────
+// ─── State ──────────────────────────────────────────────────
 let sheetData = null;
 let langMap   = [];
+let logCount  = 0;
+let consoleOpen = false;
 
-// ─── DOM ───────────────────────────────────────────────────
+// ─── DOM ────────────────────────────────────────────────────
 const gameNameEl  = document.getElementById('gameName');
 const startRowEl  = document.getElementById('startRow');
 const endRowEl    = document.getElementById('endRow');
@@ -643,70 +771,85 @@ const sheetUrlEl  = document.getElementById('sheetUrl');
 const fetchBtn    = document.getElementById('fetchBtn');
 const dropZone    = document.getElementById('dropZone');
 const fileInput   = document.getElementById('fileInput');
-const consoleEl   = document.getElementById('console');
-const successBar  = document.getElementById('successBar');
+const successCard = document.getElementById('successCard');
+const consoleBody = document.getElementById('consoleBody');
+const consoleCount= document.getElementById('consoleCount');
 
-// ─── Accordion sections ────────────────────────────────────
-document.querySelectorAll('.section-head').forEach(head => {
-  head.addEventListener('click', () => {
-    const body = document.getElementById(head.dataset.target);
-    const open = head.classList.toggle('open');
-    body.style.display = open ? 'block' : 'none';
-  });
-});
-
-// ─── Source tabs ───────────────────────────────────────────
+// ─── Source tabs ─────────────────────────────────────────────
 function switchSrc(tab) {
-  document.querySelectorAll('.src-tab').forEach((t,i) =>
-    t.classList.toggle('active', (i===0) === (tab==='link')));
+  document.querySelectorAll('.src-btn').forEach((b,i)=>b.classList.toggle('active',(i===0)===(tab==='link')));
   document.getElementById('srcLink').classList.toggle('active', tab==='link');
   document.getElementById('srcFile').classList.toggle('active', tab==='file');
 }
 
-// ─── Toolbar tab indicators ────────────────────────────────
-function setToolbarStep(n) {
-  ['tb1','tb2','tb3'].forEach((id,i) => {
-    const el = document.getElementById(id);
-    el.className = 'tb-tab' + (i+1===n ? ' active' : i+1<n ? ' done' : '');
-  });
+// ─── Advanced toggle ─────────────────────────────────────────
+function toggleAdv() {
+  const btn  = document.getElementById('advToggle');
+  const body = document.getElementById('advBody');
+  btn.classList.toggle('open');
+  body.classList.toggle('open');
 }
 
-// ─── Google Sheet fetch ────────────────────────────────────
+// ─── Console toggle ──────────────────────────────────────────
+function toggleConsole() {
+  consoleOpen = !consoleOpen;
+  consoleBody.classList.toggle('open', consoleOpen);
+  document.getElementById('consoleHead').classList.toggle('open', consoleOpen);
+  document.getElementById('consoleArrow').textContent = consoleOpen ? '▼' : '▶';
+}
+
+function clearConsole(e) {
+  if(e) e.stopPropagation();
+  consoleBody.innerHTML = '';
+  logCount = 0;
+  consoleCount.textContent = '0';
+  consoleCount.classList.remove('has-logs');
+}
+
+// ─── Steps ───────────────────────────────────────────────────
+function setStep(n) {
+  ['step1','step2','step3'].forEach((id,i) => {
+    const el = document.getElementById(id);
+    el.className = 'step-item' + (i+1 < n ? ' done' : i+1 === n ? ' active' : '');
+  });
+  // dot on card 2
+  const dot2 = document.getElementById('dot2');
+  if(n >= 2) { dot2.classList.add('blue'); }
+  if(n >= 3) { dot2.classList.remove('blue'); dot2.classList.add('green'); }
+}
+
+// ─── Google Sheet fetch ──────────────────────────────────────
 async function fetchSheet() {
   const url = sheetUrlEl.value.trim();
   if (!url) return;
 
   const idMatch = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
-  if (!idMatch) {
-    showStatus('err','✗ No spreadsheet ID found in this URL'); return;
-  }
+  if (!idMatch) { showStatus('err','✗ No spreadsheet ID found in this URL'); return; }
+
   const sheetId  = idMatch[1];
   const gidMatch = url.match(/[#&?]gid=(\d+)/);
   const gid      = gidMatch ? gidMatch[1] : null;
-  let csvUrl     = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`;
+  let   csvUrl   = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`;
   if (gid) csvUrl += `&gid=${gid}`;
 
-  showStatus('info','↻ fetching…');
+  showStatus('info','↻ Loading sheet data…');
   fetchBtn.disabled = true;
-  clog('info','Fetching: ' + csvUrl);
+  clog('info', 'Fetching: ' + csvUrl);
 
   try {
     const resp = await fetch(csvUrl);
     if (!resp.ok) {
-      const msg = resp.status===401||resp.status===403
-        ? '✗ Access denied — share the sheet as "Anyone with link → Viewer"'
-        : `✗ HTTP ${resp.status}`;
-      showStatus('err', msg);
-      clog('error', msg);
-      return;
+      const msg = (resp.status===401||resp.status===403)
+        ? '✗ Access denied — share the sheet as "Anyone with the link → Viewer"'
+        : `✗ HTTP ${resp.status} — could not fetch the sheet`;
+      showStatus('err', msg); clog('error', msg); return;
     }
-    const csv  = await resp.text();
-    const rows = parseCSV(csv);
+    const rows = parseCSV(await resp.text());
     onDataLoaded(rows, `Google Sheet (${rows.length} rows)`);
-    showStatus('ok', `✓ Loaded ${rows.length} rows`);
+    showStatus('ok', `✓ Loaded successfully — ${rows.length} rows`);
   } catch(e) {
-    showStatus('warn','⚠ Browser blocked the request — try Upload .xlsx instead');
-    clog('warn','CORS or network error: ' + e.message);
+    showStatus('warn','⚠ Could not fetch directly. Use the "Upload .xlsx" option instead.');
+    clog('warn', 'Network/CORS error: ' + e.message);
   } finally {
     fetchBtn.disabled = false;
   }
@@ -719,25 +862,25 @@ function showStatus(type, msg) {
   fetchStatus.textContent = msg;
 }
 
-// ─── CSV parser ────────────────────────────────────────────
+// ─── CSV parser ──────────────────────────────────────────────
 function parseCSV(text) {
-  const rows=[];let row=[],field='',inQ=false;
+  const rows=[];let row=[],f='',q=false;
   for(let i=0;i<text.length;i++){
     const c=text[i],n=text[i+1];
-    if(inQ){if(c==='"'&&n==='"'){field+='"';i++}else if(c==='"'){inQ=false}else{field+=c}}
-    else{if(c==='"'){inQ=true}else if(c===','){row.push(field);field=''}
-    else if(c==='\r'&&n==='\n'){row.push(field);rows.push(row);row=[];field='';i++}
-    else if(c==='\n'||c==='\r'){row.push(field);rows.push(row);row=[];field=''}
-    else{field+=c}}
+    if(q){if(c==='"'&&n==='"'){f+='"';i++}else if(c==='"'){q=false}else{f+=c}}
+    else{if(c==='"'){q=true}else if(c===','){row.push(f);f=''}
+    else if(c==='\r'&&n==='\n'){row.push(f);rows.push(row);row=[];f='';i++}
+    else if(c==='\n'||c==='\r'){row.push(f);rows.push(row);row=[];f=''}
+    else{f+=c}}
   }
-  if(field||row.length){row.push(field);rows.push(row)}
+  if(f||row.length){row.push(f);rows.push(row)}
   return rows;
 }
 
-// ─── File upload ───────────────────────────────────────────
+// ─── File upload ─────────────────────────────────────────────
 dropZone.addEventListener('dragover', e=>{e.preventDefault();dropZone.classList.add('drag-over')});
 dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('drag-over'));
-dropZone.addEventListener('drop', e=>{
+dropZone.addEventListener('drop',e=>{
   e.preventDefault();dropZone.classList.remove('drag-over');
   if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
 });
@@ -748,55 +891,51 @@ function handleFile(file) {
   reader.onload = e => {
     try {
       const wb   = XLSX.read(e.target.result,{type:'array'});
-      const ws   = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});
       onDataLoaded(rows, file.name);
       dropZone.classList.add('loaded');
-      document.getElementById('dzText').textContent = `// ✓ ${file.name} — ${rows.length} rows`;
-    } catch(err) {
-      clog('error','Failed to read file: '+err.message);
-    }
+      document.getElementById('dzTitle').textContent = `✓ ${file.name} — ${rows.length} rows loaded`;
+    } catch(err) { clog('error','Failed to read: '+err.message); }
   };
   reader.readAsArrayBuffer(file);
 }
 
-// ─── On data loaded ────────────────────────────────────────
+// ─── Data loaded ─────────────────────────────────────────────
 function onDataLoaded(rows, source) {
   sheetData = rows;
-  const nameFromA2 = String((rows[1]&&rows[1][0])||'').trim();
-  if(nameFromA2 && !gameNameEl.value) gameNameEl.value = nameFromA2;
+  const name = String((rows[1]&&rows[1][0])||'').trim();
+  if(name && !gameNameEl.value) gameNameEl.value = name;
   detectLanguages(rows);
-  setToolbarStep(2);
+  setStep(2);
   checkReady();
   clog('success', `Loaded: ${source}`);
-  if(nameFromA2) clog('info', `game_name from A2: "${nameFromA2}"`);
-  clog('info', `Detected languages: ${langMap.map(l=>l.code).join(', ')}`);
+  if(name) clog('info', `game_name from A2: "${name}"`);
+  clog('info', `Languages detected: ${langMap.map(l=>l.code).join(', ')}`);
 }
 
-// ─── Detect languages ──────────────────────────────────────
+// ─── Language detection ──────────────────────────────────────
 function detectLanguages(rows) {
-  const idx = parseInt(headerRowEl.value,10)-1;
-  const hdr = rows[idx]||[];
+  const hdr = rows[parseInt(headerRowEl.value,10)-1]||[];
   langMap = [];
   hdr.forEach((cell,i)=>{
     const code = HEADER_TO_CODE[String(cell||'').trim().toLowerCase()];
     if(code) langMap.push({col:i,code,on:true});
   });
-  renderChips();
+  renderLangChips();
 }
 
-function renderChips() {
-  const el = document.getElementById('langChips');
+function renderLangChips() {
+  const el = document.getElementById('langGrid');
   el.innerHTML = '';
   if(!langMap.length){
-    el.innerHTML='<span style="color:var(--dt-text-dim);font-family:var(--mono);font-size:11px">// none detected</span>';
+    el.innerHTML='<span style="font-family:var(--mono);font-size:11px;color:var(--text-dim)">// none detected</span>';
     return;
   }
   langMap.forEach((lang,i)=>{
     const lbl = document.createElement('label');
-    lbl.className = 'lang-chip' + (lang.on?' on':'');
+    lbl.className = 'lang-chip'+(lang.on?' on':'');
     lbl.innerHTML = `<input type="checkbox" ${lang.on?'checked':''}>${lang.code}`;
-    lbl.querySelector('input').addEventListener('change', e=>{
+    lbl.querySelector('input').addEventListener('change',e=>{
       langMap[i].on=e.target.checked;
       lbl.classList.toggle('on',e.target.checked);
     });
@@ -807,39 +946,40 @@ function renderChips() {
 headerRowEl.addEventListener('change',()=>{
   if(!sheetData) return;
   detectLanguages(sheetData);
-  clog('info',`Re-detected languages from row ${headerRowEl.value}: ${langMap.map(l=>l.code).join(', ')}`);
+  clog('info',`Re-detected from row ${headerRowEl.value}: ${langMap.map(l=>l.code).join(', ')}`);
 });
 
-// ─── Ready check ───────────────────────────────────────────
+// ─── Ready check ─────────────────────────────────────────────
 gameNameEl.addEventListener('input', checkReady);
 function checkReady() {
   const ready = !!(sheetData && gameNameEl.value.trim());
   generateBtn.disabled = !ready;
-  if(ready) setToolbarStep(3);
+  if(ready) setStep(3);
 }
 
-// ─── Console ───────────────────────────────────────────────
+// ─── Console log ─────────────────────────────────────────────
 function clog(type, msg) {
-  const now = new Date();
-  const t   = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
-  const icons = {info:'ℹ',success:'✓',warn:'⚠',error:'✗'};
+  const t = new Date();
+  const ts = `${t.getHours().toString().padStart(2,'0')}:${t.getMinutes().toString().padStart(2,'0')}:${t.getSeconds().toString().padStart(2,'0')}`;
+  const icons = {info:'i',success:'✓',warn:'⚠',error:'✗'};
   const row = document.createElement('div');
   row.className = `c-row ${type}`;
-  row.innerHTML = `<span class="c-icon">${icons[type]||'·'}</span><span class="c-msg">${msg}</span><span class="c-time">${t}</span>`;
-  consoleEl.appendChild(row);
-  consoleEl.scrollTop = consoleEl.scrollHeight;
+  row.innerHTML = `<span class="c-icon">${icons[type]||'·'}</span><span class="c-msg">${msg}</span><span class="c-time">${ts}</span>`;
+  consoleBody.appendChild(row);
+  consoleBody.scrollTop = consoleBody.scrollHeight;
+  logCount++;
+  consoleCount.textContent = logCount;
+  consoleCount.classList.add('has-logs');
 }
 
-function clearConsole() {
-  consoleEl.innerHTML = '';
-  successBar.classList.remove('visible');
-}
-
-// ─── Generate ──────────────────────────────────────────────
+// ─── Generate ────────────────────────────────────────────────
 generateBtn.addEventListener('click', async () => {
   generateBtn.classList.add('loading');
   generateBtn.disabled = true;
-  successBar.classList.remove('visible');
+  successCard.classList.remove('visible');
+
+  // Auto-open console during generation
+  if(!consoleOpen) toggleConsole();
 
   try {
     const gameName    = gameNameEl.value.trim();
@@ -849,64 +989,58 @@ generateBtn.addEventListener('click', async () => {
 
     if(!activeLangs.length){ clog('error','No languages selected'); return; }
 
-    clog('info', `game_name = "${gameName}"`);
-    clog('info', `rows      = ${startRow}–${endRow}`);
-    clog('info', `langs     = ${activeLangs.map(l=>l.code).join(', ')}`);
+    clog('info',  `game_name = "${gameName}"`);
+    clog('info',  `rows      = ${startRow}–${endRow}`);
+    clog('info',  `langs     = ${activeLangs.map(l=>l.code).join(', ')}`);
 
-    const block    = sheetData.slice(startRow-1, endRow);
-    const sections = parseSections(block, activeLangs);
+    const sections = parseSections(sheetData.slice(startRow-1,endRow), activeLangs);
     clog('success', `Parsed ${sections.length} sections`);
 
     const zip = new JSZip();
     activeLangs.forEach(lang=>{
-      const html = buildHtml(gameName, sections, lang.col);
-      zip.file(`help_${lang.code}.html`, html);
+      zip.file(`help_${lang.code}.html`, buildHtml(gameName, sections, lang.col));
       clog('success', `Built  help_${lang.code}.html`);
     });
 
     const blob = await zip.generateAsync({type:'blob'});
     const safe = gameName.replace(/[^a-zA-Z0-9_\-]/g,'_').replace(/_+/g,'_');
     const a = Object.assign(document.createElement('a'),{
-      href: URL.createObjectURL(blob),
-      download: `help_pages_${safe}.zip`
+      href: URL.createObjectURL(blob), download: `help_pages_${safe}.zip`
     });
-    a.click();
-    URL.revokeObjectURL(a.href);
+    a.click(); URL.revokeObjectURL(a.href);
 
-    successBar.textContent = `✓  ZIP downloaded — ${activeLangs.length} files · ${sections.length} sections · "${gameName}"`;
-    successBar.classList.add('visible');
-    clog('success', `ZIP download complete`);
-    setToolbarStep(3);
+    document.getElementById('successDetail').textContent =
+      `${activeLangs.length} files · ${sections.length} sections · "${gameName}"`;
+    successCard.classList.add('visible');
+    successCard.scrollIntoView({behavior:'smooth', block:'nearest'});
+    clog('success','ZIP download complete ✓');
 
   } catch(err) {
     clog('error','Exception: '+err.message);
-    console.error(err);
   } finally {
     generateBtn.classList.remove('loading');
     generateBtn.disabled = false;
   }
 });
 
-// ─── Parse sections ────────────────────────────────────────
-function parseSections(block, activeLangs) {
-  const sections=[];let cur=null,expectTitle=true;
+// ─── Parse sections ──────────────────────────────────────────
+function parseSections(block, langs) {
+  const s=[];let cur=null,expT=true;
   block.forEach(row=>{
-    const blank = activeLangs.every(l=>String(row[l.col]||'').trim()==='');
-    if(blank){if(cur)sections.push(cur);cur=null;expectTitle=true;return}
-    if(expectTitle){
+    const blank=langs.every(l=>String(row[l.col]||'').trim()==='');
+    if(blank){if(cur)s.push(cur);cur=null;expT=true;return}
+    if(expT){
       cur={enTitle:String(row[0]||'').trim(),titleByCol:{},contentByCol:{}};
-      activeLangs.forEach(l=>{cur.titleByCol[l.col]=String(row[l.col]||'').trim();cur.contentByCol[l.col]=[]});
-      expectTitle=false;
-    } else {
-      if(cur) activeLangs.forEach(l=>cur.contentByCol[l.col].push(String(row[l.col]||'').trim()));
-    }
+      langs.forEach(l=>{cur.titleByCol[l.col]=String(row[l.col]||'').trim();cur.contentByCol[l.col]=[]});
+      expT=false;
+    } else { if(cur) langs.forEach(l=>cur.contentByCol[l.col].push(String(row[l.col]||'').trim())); }
   });
-  if(cur) sections.push(cur);
-  return sections;
+  if(cur) s.push(cur);
+  return s;
 }
 
-// ─── Build HTML ────────────────────────────────────────────
-function buildHtml(gameName, sections, colIndex) {
+// ─── Build HTML ──────────────────────────────────────────────
+function buildHtml(gameName, sections, col) {
   return [
     '<div id="content-help">',
     '    <style>',
@@ -919,42 +1053,35 @@ function buildHtml(gameName, sections, colIndex) {
     `        <h1>${esc(gameName)}</h1>`,
     '    </div>',
     '',
-    sections.map(s=>buildSection(s,colIndex)).join('\n\n'),
+    sections.map(s=>buildSection(s,col)).join('\n\n'),
     '</div>',
   ].join('\n');
 }
 
 function buildSection(sec, col) {
-  const id    = slugify(sec.enTitle);
-  const title = sec.titleByCol[col]||'';
-  const lines = sec.contentByCol[col]||[];
-  const ind   = '            ';
-  const parts = lines.map((l,i)=>ind+processLine(l)+(i<lines.length-1?'\n'+ind+'<br>':''));
+  const id=slugify(sec.enTitle), title=sec.titleByCol[col]||'', lines=sec.contentByCol[col]||[];
+  const ind='            ';
   return [
     `    <div id="help__${id}">`,
     `        <h2>${esc(title)}${title?':':''}</h2>`,
     '',
     '        <p>',
-    parts.join('\n'),
+    lines.map((l,i)=>ind+processLine(l)+(i<lines.length-1?'\n'+ind+'<br>':'')).join('\n'),
     '        </p>',
     '    </div>',
   ].join('\n');
 }
 
-// ─── Line processor ────────────────────────────────────────
 function processLine(line) {
   if(!line) return '';
-  if(/\d+[.,]\d+\s*%|\d+\s*%/.test(line)) {
+  if(/\d+[.,]\d+\s*%|\d+\s*%/.test(line))
     return esc(line.replace(/(\d+[.,]\d+)(\s*%)/,'{{game_rtp}}$2').replace(/(\d+)(\s*%)/,'{{game_rtp}}$2'));
-  }
-  const maxRe = /\d{1,3}(?:[,. ]\d{3})+(?:[.,]\d{1,2})?/;
-  if(maxRe.test(line)&&!line.includes('{{maxWinnings}}')) {
-    return [`<span class="not-configured_{{maxWinnings}}">`,`                ${esc(line.replace(maxRe,'{{maxWinnings}}'))}`,`            </span>`].join('\n');
-  }
+  const re=/\d{1,3}(?:[,. ]\d{3})+(?:[.,]\d{1,2})?/;
+  if(re.test(line)&&!line.includes('{{maxWinnings}}'))
+    return [`<span class="not-configured_{{maxWinnings}}">`,`                ${esc(line.replace(re,'{{maxWinnings}}'))}`,`            </span>`].join('\n');
   return esc(line);
 }
 
-// ─── Utils ─────────────────────────────────────────────────
 function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function slugify(t){return t.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'')}
 </script>
