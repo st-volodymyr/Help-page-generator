@@ -91,6 +91,6 @@ export function downloadSingle(langCode: string, gameName: string, clog: ClogFn)
   const html = state.generated[langCode];
   if (!html) { clog('error', `No generated file for "${langCode}"`); return; }
   const blob = new Blob([html], { type: 'text/html' });
-  triggerDownload(blob, `help_${langCode}_${safeName(gameName)}.html`);
+  triggerDownload(blob, `help_${langCode}.html`);
   clog('success', `Downloaded help_${langCode}.html ✓`);
 }
