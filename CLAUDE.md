@@ -7,14 +7,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 npm install          # first-time setup
 npm run dev          # dev server with HMR (http://localhost:5173)
-npm run build        # production build → dist/
-npm run preview      # serve the dist/ build locally
+npm run build        # production build → docs/  (commit docs/ to deploy)
+npm run preview      # serve the docs/ build locally
 npm run typecheck    # tsc --noEmit (no output = clean)
 ```
 
+## Deployment
+
+- GitHub Pages serves from the `docs/` folder on the `main` branch (Settings → Pages → Deploy from branch → main / docs)
+- After any change: `npm run build` → commit `docs/` → push
+- A GitHub Actions workflow (`.github/workflows/deploy.yml`) also exists as an alternative — requires Pages source set to "GitHub Actions"
+
 ## Architecture
 
-Vite project. `index.html` at root, source modules in `src/`.
+Vite + TypeScript project. `index.html` at root, source modules in `src/`, production build output in `docs/`.
 
 **External globals (CDN, loaded in `index.html`):**
 - `XLSX` v0.18.5 — parses `.xlsx` file uploads
@@ -26,47 +32,65 @@ Vite project. `index.html` at root, source modules in `src/`.
 |------|------|
 | `src/types.ts` | Shared interfaces: `LangEntry`, `Section`, `AppState`, `ClogFn` |
 | `src/globals.d.ts` | Type declarations for CDN globals (`XLSX`, `JSZip`) |
-| `src/config.ts` | `HEADER_TO_CODE` map (header text → lang code) |
-| `src/state.ts` | Shared mutable state: `sheetData`, `langMap`, `generated`, `defaults` |
-| `src/parser.ts` | `parseCSV`, `detectLanguages`, `parseSections`, `extractDefaults` |
+| `src/config.ts` | `HEADER_TO_CODE` map (header text → lang code), two formats supported |
+| `src/state.ts` | Shared mutable state: `sheetData`, `langMap`, `generated`, `params` |
+| `src/parser.ts` | `parseCSV`, `detectLanguages`, `detectHeaderRow`, `detectRowRange`, `markEmptyLanguages`, `parseSections`, `extractDefaults` |
 | `src/builder.ts` | `buildHtml`, `buildSection`, `processLine`, `esc`, `slugify` |
-| `src/generator.ts` | `generate()`, `downloadZip()`, `downloadSingle()` |
-| `src/preview.ts` | Preview panel open/close, `buildPreviewDoc`, live var substitution |
-| `src/main.ts` | DOM wiring, event listeners, UI state (steps, console, chips) |
+| `src/generator.ts` | `generate()`, `extractParamDefaults()`, `downloadZip()`, `downloadSingle()` |
+| `src/preview.ts` | Preview panel open/close, `buildPreviewDoc`, dynamic param inputs, live substitution |
+| `src/main.ts` | DOM wiring, event listeners, UI state (steps, console, lang chips) |
 | `src/style.css` | All styles including CSS-grid split-panel layout |
 
 **Data flow:**
 ```
 Input (Google Sheets URL or .xlsx upload)
   → parseCSV / XLSX → state.sheetData
-  → detectLanguages → state.langMap
+  → detectHeaderRow → detectRowRange → detectLanguages → state.langMap
+  → markEmptyLanguages → empty columns flagged (on=false, empty=true)
   → user configures game name, row range, active languages
   → generate(): parseSections + buildHtml per lang → state.generated
-  → extractDefaults() → state.defaults (rtp, maxWinnings from EN col)
-  → downloadZip() → ZIP download
-  → openPreview() → preview panel slides in
+  → extractParamDefaults() → state.params (all {{...}} param defaults from EN col)
+  → openPreview() → dynamic param inputs built from state.params → iframe srcdoc
+  → downloadSingle() / downloadZip() → file export
 ```
 
-**Preview panel layout:**
+**Preview panel:**
 - `.app-shell` uses CSS grid: `grid-template-columns: 1fr 0px` → `440px 1fr` when `.preview-open`
-- `grid-template-columns` transition animates the split (Chrome 107+, Firefox 119+)
-- Preview renders in an `<iframe srcdoc>` — isolated styles, white background
-- `{{game_rtp}}` and `{{maxWinnings}}` inputs default to values extracted from the EN column
-- `not-configured_{{maxWinnings}}` class → replaced with `is-configured` so span is visible in preview
+- Transition animates the split (Chrome 107+, Firefox 119+)
+- Preview renders in `<iframe srcdoc>` with dark game-matching styles (#0d0d0d bg, #fff text, Arial)
+- Param inputs are built dynamically in two groups: **// main** (`game_rtp`, `maxWinnings`) and **// section rtp** (all others)
+- `not-configured_{{maxWinnings}}` class → replaced with `is-configured` when value is set
 
 **`processLine` substitution rules:**
-- Line with `%` → replace the number before `%` with `{{game_rtp}}`
-- Line with large number (`\d{1,3}(?:[,. ]\d{3})+`) → replace with `{{maxWinnings}}` wrapped in `<span class="not-configured_{{maxWinnings}}">`
+- Line with `%` in a section whose slug contains `return` → `{{game_rtp}}`
+- Line with `%` in any other section → `{{section_slug_rtp}}` (2nd occurrence: `_rtp_2`, etc.)
+- Line with large formatted number (`\d{1,3}(?:[,. ]\d{3})+`) → `{{maxWinnings}}` wrapped in `<span class="not-configured_{{maxWinnings}}">`
+
+**Loading new sheet resets all state:**
+- Closes preview, clears `state.generated`, `state.params`, game name field, success card, resets to step 1
 
 ## Supported Languages
 
-`en`, `el`, `es`, `fr-ca`, `fr`, `it`, `nl`, `pt-br`, `pt-pt`, `sv`
+`en`, `en-ct`, `el`, `es`, `fr-ca`, `fr`, `it`, `nl`, `pt-br`, `pt-pt`, `sv`
 
-To add a language, add an entry to `HEADER_TO_CODE` in `src/config.js`.
+Two header formats in `HEADER_TO_CODE` (`src/config.ts`):
+- Format A: `"English (EN)"`, `"Spanish (ES)"` …
+- Format B: `"EN - English"`, `"ES - Spanish"` …
+
+To add a language, add both format variants to `HEADER_TO_CODE`.
 
 ## Input Sheet Format
 
-- **Row 4**: Column headers (language names used for detection)
-- **Cell A2**: Game name (auto-populated into the UI)
-- **Rows 196–263** (default): Content rows — blank rows create section breaks, first non-blank row in a section is the section title
+- **Cell A2**: Game name (auto-filled into the UI)
+- **Language row**: Row with ≥2 known language headers — auto-detected by `detectHeaderRow`
+- **Content block**: Starts at first row containing "How to Play", ends before "©/copyright" — auto-detected by `detectRowRange`
+- Blank rows in content block = section breaks; first non-blank row of each block = section title (from col 0 / enTitle)
 - Sheet must be shared as "Anyone with the link can view" for URL-based loading
+
+## UI Behaviour Notes
+
+- **Steps bar**: 2 steps only — "Load sheet" (step1) and "Generate" (step3 ID kept for back-compat)
+- **Load button**: disabled and URL field highlighted yellow when URL is empty; button highlights blue when URL is filled
+- **Language chips**: empty columns shown with dashed border + "empty" badge, unchecked by default
+- **Download single**: filename format is `help_LANGCODE.html` (e.g. `help_fr-ca.html`)
+- **Download ZIP**: filename format is `help_pages_GAMENAME.zip`
