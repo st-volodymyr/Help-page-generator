@@ -1,1090 +1,225 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Help Page Generator</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231e1e1e'/%3E%3Crect x='7' y='4' width='14' height='18' rx='2' fill='%232d2d2d' stroke='%234e9bde' stroke-width='1'/%3E%3Cline x1='10' y1='10' x2='18' y2='10' stroke='%234e9bde' stroke-width='1.2' stroke-linecap='round'/%3E%3Cline x1='10' y1='14' x2='18' y2='14' stroke='%234e9bde' stroke-width='1.2' stroke-linecap='round'/%3E%3Cline x1='10' y1='18' x2='15' y2='18' stroke='%234ec94e' stroke-width='1.2' stroke-linecap='round'/%3E%3Ctext x='7' y='30' font-family='Consolas,monospace' font-size='7' font-weight='700' fill='%234ec94e'%3E.html%3C/text%3E%3C/svg%3E">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap');
-
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-
-:root {
-  --bg:        #1e1e1e;
-  --surface:   #252526;
-  --surface2:  #2d2d2d;
-  --surface3:  #333333;
-  --border:    #3c3c3c;
-  --border2:   #4e4e4e;
-  --blue:      #4e9bde;
-  --blue-bg:   #1a3a5c;
-  --green:     #4ec94e;
-  --green-bg:  #1a3a1a;
-  --red:       #e06c6c;
-  --yellow:    #d4b44a;
-  --orange:    #ce9178;
-  --text:      #cccccc;
-  --text-dim:  #858585;
-  --text-hi:   #e8e8e8;
-  --mono:      'Roboto Mono', 'Consolas', monospace;
-  --sans:      'Inter', system-ui, sans-serif;
-  --radius:    4px;
-}
-
-html { height: 100%; }
-
-body {
-  min-height: 100%;
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--sans);
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-/* ── Page shell ── */
-.page {
-  max-width: 760px;
-  margin: 0 auto;
-  padding: 40px 24px 80px;
-}
-
-/* ── Header ── */
-.header {
-  margin-bottom: 32px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.header-left {}
-
-.app-name {
-  font-family: var(--mono);
-  font-size: 13px;
-  color: var(--text-dim);
-  margin-bottom: 4px;
-}
-
-.app-name span { color: var(--blue); }
-
-h1 {
-  font-family: var(--sans);
-  font-size: 22px;
-  font-weight: 600;
-  color: var(--text-hi);
-  letter-spacing: -0.3px;
-}
-
-.version-badge {
-  font-family: var(--mono);
-  font-size: 10px;
-  padding: 3px 8px;
-  border: 1px solid var(--border2);
-  border-radius: 2px;
-  color: var(--text-dim);
-}
-
-/* ── Steps row ── */
-.steps {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  margin-bottom: 28px;
-}
-
-.step-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  cursor: default;
-  position: relative;
-  flex: 1;
-}
-
-.step-item:not(:last-child) { border-right: none; }
-.step-item:first-child { border-radius: var(--radius) 0 0 var(--radius); }
-.step-item:last-child  { border-radius: 0 var(--radius) var(--radius) 0; border-right: 1px solid var(--border); }
-
-.step-item.active { background: var(--blue-bg); border-color: var(--blue); }
-.step-item.done   { background: var(--green-bg); border-color: var(--green); }
-
-/* keep borders continuous */
-.step-item.active + .step-item { border-left-color: var(--blue); }
-.step-item.done   + .step-item { border-left-color: var(--green); }
-
-.step-num {
-  font-family: var(--mono);
-  font-size: 10px;
-  width: 18px; height: 18px;
-  border-radius: 50%;
-  border: 1px solid var(--border2);
-  display: flex; align-items: center; justify-content: center;
-  color: var(--text-dim);
-  flex-shrink: 0;
-}
-
-.step-item.active .step-num { border-color: var(--blue); color: var(--blue); }
-.step-item.done   .step-num { border-color: var(--green); color: var(--green); background: var(--green-bg); }
-
-.step-label {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-dim);
-  white-space: nowrap;
-}
-
-.step-item.active .step-label { color: var(--blue); }
-.step-item.done   .step-label { color: var(--green); }
-
-/* ── Card ── */
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  margin-bottom: 16px;
-  overflow: hidden;
-}
-
-.card-head {
-  padding: 12px 16px;
-  background: var(--surface2);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.card-title {
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--text-dim);
-  letter-spacing: 0.04em;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.card-title .dot {
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: var(--border2);
-}
-
-.card-title .dot.blue   { background: var(--blue); }
-.card-title .dot.green  { background: var(--green); }
-.card-title .dot.yellow { background: var(--yellow); }
-
-.card-body {
-  padding: 20px;
-}
-
-/* ── Source switcher ── */
-.src-switch {
-  display: flex;
-  background: var(--surface3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 3px;
-  gap: 3px;
-  margin-bottom: 16px;
-}
-
-.src-btn {
-  flex: 1;
-  padding: 7px 12px;
-  background: transparent;
-  border: none;
-  border-radius: 2px;
-  color: var(--text-dim);
-  font-family: var(--sans);
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-}
-
-.src-btn:hover { color: var(--text); background: var(--surface2); }
-
-.src-btn.active {
-  background: var(--blue-bg);
-  color: var(--blue);
-  border: 1px solid rgba(78,155,222,0.3);
-}
-
-.tab-panel { display: none; }
-.tab-panel.active { display: block; }
-
-/* ── URL row ── */
-.url-row {
-  display: flex;
-  gap: 8px;
-}
-
-.url-row input { flex: 1; min-width: 0; }
-
-/* ── Drop zone ── */
-.drop-zone {
-  border: 1px dashed var(--border2);
-  border-radius: var(--radius);
-  padding: 28px 20px;
-  text-align: center;
-  cursor: pointer;
-  position: relative;
-  transition: all 0.15s;
-  background: var(--surface3);
-}
-
-.drop-zone:hover, .drop-zone.drag-over {
-  border-color: var(--blue);
-  background: var(--blue-bg);
-}
-
-.drop-zone input[type=file] {
-  position: absolute; inset: 0;
-  opacity: 0; cursor: pointer;
-}
-
-.dz-icon { font-size: 24px; margin-bottom: 8px; }
-.dz-title { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
-.dz-sub   { font-size: 11px; color: var(--text-dim); font-family: var(--mono); }
-
-.drop-zone.loaded { border-color: var(--green); border-style: solid; background: var(--green-bg); }
-.drop-zone.loaded .dz-title { color: var(--green); }
-
-/* ── Hint text ── */
-.hint {
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--text-dim);
-  margin-top: 8px;
-  line-height: 1.6;
-  padding: 8px 10px;
-  background: var(--surface3);
-  border-radius: var(--radius);
-  border-left: 2px solid var(--yellow);
-}
-
-.hint strong { color: var(--yellow); font-weight: 400; }
-
-/* ── Status ── */
-.status {
-  display: none;
-  font-family: var(--mono);
-  font-size: 11px;
-  padding: 8px 10px;
-  border-radius: var(--radius);
-  margin-top: 10px;
-  border-left: 3px solid;
-  line-height: 1.5;
-}
-.status.visible { display: block; }
-.status.ok   { border-color: var(--green);  color: var(--green);  background: var(--green-bg); }
-.status.err  { border-color: var(--red);    color: var(--red);    background: rgba(224,108,108,0.08); }
-.status.warn { border-color: var(--yellow); color: var(--yellow); background: rgba(212,180,74,0.08); }
-.status.info { border-color: var(--blue);   color: var(--blue);   background: var(--blue-bg); }
-
-/* ── Form fields ── */
-.field { margin-bottom: 14px; }
-.field:last-child { margin-bottom: 0; }
-
-.field label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-dim);
-  margin-bottom: 6px;
-}
-
-.field label .lbl-hint {
-  font-family: var(--mono);
-  font-size: 10px;
-  color: var(--border2);
-  font-weight: 400;
-}
-
-input[type=text],
-input[type=url],
-input[type=number] {
-  width: 100%;
-  background: var(--surface3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text-hi);
-  font-family: var(--mono);
-  font-size: 12px;
-  padding: 8px 10px;
-  outline: none;
-  transition: border-color 0.15s;
-}
-
-input:focus { border-color: var(--blue); }
-input::placeholder { color: var(--border2); }
-
-.field-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-/* ── Language grid ── */
-.lang-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 6px;
-}
-
-.lang-chip {
-  font-family: var(--mono);
-  font-size: 11px;
-  padding: 4px 10px;
-  border: 1px solid var(--border);
-  border-radius: 2px;
-  cursor: pointer;
-  background: var(--surface3);
-  color: var(--text-dim);
-  user-select: none;
-  transition: all 0.1s;
-  display: flex; align-items: center; gap: 5px;
-}
-
-.lang-chip input { display: none; }
-.lang-chip:hover { border-color: var(--blue); color: var(--text); }
-.lang-chip.on { border-color: var(--blue); background: var(--blue-bg); color: var(--blue); }
-.lang-chip.on::before { content: '✓ '; font-size: 10px; }
-
-/* ── Advanced toggle ── */
-.adv-toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--text-dim);
-  font-size: 12px;
-  cursor: pointer;
-  padding: 8px 0 0;
-  user-select: none;
-  border: none;
-  background: none;
-  font-family: var(--sans);
-}
-
-.adv-toggle:hover { color: var(--text); }
-.adv-toggle .arrow { font-size: 9px; transition: transform 0.15s; }
-.adv-toggle.open .arrow { transform: rotate(90deg); }
-
-.adv-body {
-  display: none;
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid var(--border);
-}
-
-.adv-body.open { display: block; }
-
-/* ── Generate button ── */
-.btn-generate {
-  width: 100%;
-  padding: 11px 16px;
-  background: var(--blue);
-  border: none;
-  border-radius: var(--radius);
-  color: #fff;
-  font-family: var(--sans);
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  letter-spacing: 0.01em;
-}
-
-.btn-generate:hover:not(:disabled) {
-  background: #5aa8e8;
-  box-shadow: 0 0 0 3px rgba(78,155,222,0.2);
-}
-
-.btn-generate:disabled { opacity: 0.35; cursor: not-allowed; }
-
-.btn-generate .spin {
-  display: none;
-  width: 14px; height: 14px;
-  border: 2px solid rgba(255,255,255,0.3);
-  border-top-color: #fff;
-  border-radius: 50%;
-  animation: spin 0.6s linear infinite;
-}
-
-.btn-generate.loading .btn-lbl { display: none; }
-.btn-generate.loading .spin    { display: block; }
-
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* ── Small button ── */
-.btn-sm {
-  padding: 8px 14px;
-  background: var(--surface3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text);
-  font-family: var(--sans);
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.15s;
-  flex-shrink: 0;
-}
-
-.btn-sm:hover:not(:disabled) { border-color: var(--blue); color: var(--blue); }
-.btn-sm:disabled { opacity: 0.4; cursor: not-allowed; }
-
-/* ── Success card ── */
-.success-card {
-  display: none;
-  background: var(--green-bg);
-  border: 1px solid var(--green);
-  border-radius: var(--radius);
-  padding: 16px 20px;
-  margin-bottom: 16px;
-}
-
-.success-card.visible { display: flex; align-items: center; gap: 12px; }
-
-.success-icon { font-size: 20px; flex-shrink: 0; }
-
-.success-text p { font-size: 13px; font-weight: 600; color: var(--green); }
-.success-text small { font-family: var(--mono); font-size: 11px; color: var(--text-dim); }
-
-/* ── Console (collapsed by default) ── */
-.console-wrap {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-
-.console-head {
-  padding: 8px 14px;
-  background: var(--surface2);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  cursor: pointer;
-  user-select: none;
-  border-bottom: 1px solid transparent;
-  transition: border-color 0.15s;
-}
-
-.console-head:hover { background: var(--surface3); }
-.console-head.open  { border-bottom-color: var(--border); }
-
-.console-head-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--text-dim);
-}
-
-.console-count {
-  background: var(--surface3);
-  border: 1px solid var(--border);
-  border-radius: 2px;
-  padding: 1px 6px;
-  font-size: 10px;
-  color: var(--text-dim);
-}
-
-.console-count.has-logs { background: var(--blue-bg); border-color: var(--blue); color: var(--blue); }
-
-.btn-clear-sm {
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--text-dim);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 2px 6px;
-}
-
-.btn-clear-sm:hover { color: var(--text); }
-
-.console-body {
-  display: none;
-  max-height: 200px;
-  overflow-y: auto;
-  background: var(--bg);
-}
-
-.console-body.open { display: block; }
-
-.c-row {
-  padding: 3px 14px;
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  font-family: var(--mono);
-  font-size: 11px;
-  line-height: 18px;
-  border-bottom: 1px solid transparent;
-}
-
-.c-row:hover { background: var(--surface); }
-.c-row.error  { color: var(--red); }
-.c-row.warn   { color: var(--yellow); }
-.c-row.info   { color: var(--blue); }
-.c-row.success{ color: var(--green); }
-
-.c-icon { width: 12px; flex-shrink: 0; text-align: center; font-size: 10px; }
-.c-msg  { flex: 1; }
-.c-time { color: var(--text-dim); flex-shrink: 0; font-size: 10px; }
-
-/* scrollbar */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: var(--bg); }
-::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 0; }
-
-/* divider */
-.divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
-
-@media (max-width: 560px) {
-  .field-row { grid-template-columns: 1fr; }
-  .steps { gap: 4px; }
-  .step-label { display: none; }
-}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Help Page Generator</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231e1e1e'/%3E%3Crect x='7' y='4' width='14' height='18' rx='2' fill='%232d2d2d' stroke='%234e9bde' stroke-width='1'/%3E%3Cline x1='10' y1='10' x2='18' y2='10' stroke='%234e9bde' stroke-width='1.2' stroke-linecap='round'/%3E%3Cline x1='10' y1='14' x2='18' y2='14' stroke='%234e9bde' stroke-width='1.2' stroke-linecap='round'/%3E%3Cline x1='10' y1='18' x2='15' y2='18' stroke='%234ec94e' stroke-width='1.2' stroke-linecap='round'/%3E%3Ctext x='7' y='30' font-family='Consolas,monospace' font-size='7' font-weight='700' fill='%234ec94e'%3E.html%3C/text%3E%3C/svg%3E">
+  <!-- CDN libs (available as globals) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body>
-<div class="page">
 
-  <!-- Header -->
-  <div class="header">
-    <div class="header-left">
-      <div class="app-name">// <span>help-page-generator</span></div>
-      <h1>Help Page Generator</h1>
-    </div>
-    <div class="version-badge">v1.2</div>
-  </div>
+<div class="app-shell" id="appShell">
 
-  <!-- Steps -->
-  <div class="steps">
-    <div class="step-item active" id="step1">
-      <div class="step-num">1</div>
-      <div class="step-label">Load sheet</div>
-    </div>
-    <div class="step-item" id="step2">
-      <div class="step-num">2</div>
-      <div class="step-label">Game config</div>
-    </div>
-    <div class="step-item" id="step3">
-      <div class="step-num">3</div>
-      <div class="step-label">Generate</div>
-    </div>
-  </div>
+  <!-- ── Left: generator panel ── -->
+  <div class="panel-main" id="panelMain">
+    <div class="panel-main-inner">
 
-  <!-- Card 1: Source -->
-  <div class="card">
-    <div class="card-head">
-      <div class="card-title">
-        <span class="dot blue"></span>
-        Step 1 — Load translations sheet
-      </div>
-    </div>
-    <div class="card-body">
-
-      <div class="src-switch">
-        <button class="src-btn active" onclick="switchSrc('link')">🔗 Google Sheet URL</button>
-        <button class="src-btn" onclick="switchSrc('file')">📄 Upload .xlsx file</button>
+      <!-- Header -->
+      <div class="header">
+        <div class="header-left">
+          <div class="app-name">// <span>help-page-generator</span></div>
+          <h1>Help Page Generator</h1>
+        </div>
+        <div class="version-badge">v2.0</div>
       </div>
 
-      <!-- Link -->
-      <div class="tab-panel active" id="srcLink">
-        <div class="field">
-          <label>Google Sheet URL</label>
-          <div class="url-row">
-            <input type="url" id="sheetUrl" placeholder="https://docs.google.com/spreadsheets/d/…" />
-            <button class="btn-sm" id="fetchBtn" onclick="fetchSheet()">Load ↗</button>
+      <!-- Steps -->
+      <div class="steps">
+        <div class="step-item active" id="step1">
+          <div class="step-num">1</div>
+          <div class="step-label">Load sheet</div>
+        </div>
+        <div class="step-item" id="step2">
+          <div class="step-num">2</div>
+          <div class="step-label">Game config</div>
+        </div>
+        <div class="step-item" id="step3">
+          <div class="step-num">3</div>
+          <div class="step-label">Generate</div>
+        </div>
+      </div>
+
+      <!-- Card 1: Source -->
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">
+            <span class="dot blue"></span>
+            Step 1 — Load translations sheet
           </div>
         </div>
-        <div class="hint">
-          ⚠ The sheet must be shared as <strong>"Anyone with the link → Viewer"</strong><br>
-          In Google Sheets: Share → General access → Anyone with the link
-        </div>
-        <div class="status" id="fetchStatus"></div>
-      </div>
+        <div class="card-body">
 
-      <!-- File -->
-      <div class="tab-panel" id="srcFile">
-        <div class="drop-zone" id="dropZone">
-          <input type="file" id="fileInput" accept=".xlsx,.xls" />
-          <div class="dz-icon">📄</div>
-          <div class="dz-title" id="dzTitle">Drop .xlsx file here or click to browse</div>
-          <div class="dz-sub">Export from Google Sheets → File → Download → Microsoft Excel (.xlsx)</div>
-        </div>
-      </div>
+          <div class="src-switch">
+            <button class="src-btn active">🔗 Google Sheet URL</button>
+            <button class="src-btn">📄 Upload .xlsx file</button>
+          </div>
 
-    </div>
-  </div>
+          <!-- Link tab -->
+          <div class="tab-panel active" id="srcLink">
+            <div class="field">
+              <label>Google Sheet URL</label>
+              <div class="url-row">
+                <input type="url" id="sheetUrl" placeholder="https://docs.google.com/spreadsheets/d/…" />
+                <button class="btn-sm" id="fetchBtn">Load ↗</button>
+              </div>
+            </div>
+            <div class="hint">
+              ⚠ The sheet must be shared as <strong>"Anyone with the link → Viewer"</strong><br>
+              In Google Sheets: Share → General access → Anyone with the link
+            </div>
+            <div class="status" id="fetchStatus"></div>
+          </div>
 
-  <!-- Card 2: Game config -->
-  <div class="card">
-    <div class="card-head">
-      <div class="card-title">
-        <span class="dot" id="dot2"></span>
-        Step 2 — Game configuration
-      </div>
-    </div>
-    <div class="card-body">
+          <!-- File tab -->
+          <div class="tab-panel" id="srcFile">
+            <div class="drop-zone" id="dropZone">
+              <input type="file" id="fileInput" accept=".xlsx,.xls" />
+              <div class="dz-icon">📄</div>
+              <div class="dz-title" id="dzTitle">Drop .xlsx file here or click to browse</div>
+              <div class="dz-sub">Export from Google Sheets → File → Download → Microsoft Excel (.xlsx)</div>
+            </div>
+          </div>
 
-      <div class="field">
-        <label>
-          Game Name
-          <span class="lbl-hint">// auto-filled from cell A2</span>
-        </label>
-        <input type="text" id="gameName" placeholder="e.g. Rocket Eruption Super Drop" />
-      </div>
-
-      <div class="field-row">
-        <div class="field">
-          <label>
-            Start Row
-            <span class="lbl-hint">// first help row</span>
-          </label>
-          <input type="number" id="startRow" value="196" min="1" />
-        </div>
-        <div class="field">
-          <label>
-            End Row
-            <span class="lbl-hint">// last help row</span>
-          </label>
-          <input type="number" id="endRow" value="263" min="1" />
         </div>
       </div>
 
-      <button class="adv-toggle open" id="advToggle" onclick="toggleAdv()">
-        <span class="arrow">▶</span>
-        Advanced settings
+      <!-- Card 2: Game config -->
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">
+            <span class="dot" id="dot2"></span>
+            Step 2 — Game configuration
+          </div>
+        </div>
+        <div class="card-body">
+
+          <div class="field">
+            <label>
+              Game Name
+              <span class="lbl-hint">// auto-filled from cell A2</span>
+            </label>
+            <input type="text" id="gameName" placeholder="e.g. Rocket Eruption Super Drop" />
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label>
+                Start Row
+                <span class="lbl-hint" id="startRowHint">// first help row</span>
+              </label>
+              <input type="number" id="startRow" placeholder="auto" min="1" />
+            </div>
+            <div class="field">
+              <label>
+                End Row
+                <span class="lbl-hint" id="endRowHint">// last help row</span>
+              </label>
+              <input type="number" id="endRow" placeholder="auto" min="1" />
+            </div>
+          </div>
+
+          <button class="adv-toggle open" id="advToggle">
+            <span class="arrow">▶</span>
+            Advanced settings
+          </button>
+
+          <div class="adv-body open" id="advBody">
+            <div class="field">
+              <label>
+                Header Row
+                <span class="lbl-hint" id="headerRowHint">// row with language column headers</span>
+              </label>
+              <input type="number" id="headerRow" placeholder="auto" min="1" />
+            </div>
+            <div class="field">
+              <label>Languages to generate</label>
+              <div class="lang-grid" id="langGrid">
+                <span style="font-family:var(--mono);font-size:11px;color:var(--text-dim)">
+                  // load sheet first to detect languages
+                </span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Success -->
+      <div class="success-card" id="successCard">
+        <div class="success-icon">✅</div>
+        <div class="success-text">
+          <p>Generated successfully!</p>
+          <small id="successDetail"></small>
+        </div>
+      </div>
+
+      <!-- Generate button -->
+      <button class="btn-generate" id="generateBtn" disabled>
+        <span class="btn-lbl">▶ &nbsp;Generate &amp; Preview</span>
+        <div class="spin"></div>
       </button>
 
-      <div class="adv-body open" id="advBody">
-        <div class="field">
-          <label>
-            Header Row
-            <span class="lbl-hint">// row with language names like "English (EN)"</span>
-          </label>
-          <input type="number" id="headerRow" value="4" min="1" />
-        </div>
-        <div class="field">
-          <label>Languages to generate</label>
-          <div class="lang-grid" id="langGrid">
-            <span style="font-family:var(--mono);font-size:11px;color:var(--text-dim)">
-              // load sheet first to detect languages
-            </span>
+      <hr class="divider">
+
+      <!-- Console -->
+      <div class="console-wrap">
+        <div class="console-head" id="consoleHead">
+          <div class="console-head-left">
+            <span>// console</span>
+            <span class="console-count" id="consoleCount">0</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <button class="btn-clear-sm" id="clearConsoleBtn">clear</button>
+            <span style="font-size:10px;color:var(--text-dim)" id="consoleArrow">▶</span>
           </div>
         </div>
+        <div class="console-body" id="consoleBody"></div>
       </div>
 
     </div>
-  </div>
+  </div><!-- /panel-main -->
 
-  <!-- Success -->
-  <div class="success-card" id="successCard">
-    <div class="success-icon">✅</div>
-    <div class="success-text">
-      <p>ZIP downloaded successfully!</p>
-      <small id="successDetail"></small>
-    </div>
-  </div>
+  <!-- ── Right: preview panel ── -->
+  <div class="panel-preview" id="panelPreview">
 
-  <!-- Generate button -->
-  <button class="btn-generate" id="generateBtn" disabled>
-    <span class="btn-lbl">▶ &nbsp;Generate HTML Files</span>
-    <div class="spin"></div>
-  </button>
+    <div class="preview-toolbar">
 
-  <hr class="divider">
-
-  <!-- Console (collapsed) -->
-  <div class="console-wrap">
-    <div class="console-head" id="consoleHead" onclick="toggleConsole()">
-      <div class="console-head-left">
-        <span>// console</span>
-        <span class="console-count" id="consoleCount">0</span>
+      <!-- Row 1: label + language tabs + close -->
+      <div class="preview-row-tabs">
+        <span class="preview-row-label">// preview</span>
+        <div class="preview-lang-tabs" id="previewLangTabs"></div>
+        <button class="btn-close-preview" id="closePanelBtn" title="Close preview">✕</button>
       </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <button class="btn-clear-sm" onclick="clearConsole(event)">clear</button>
-        <span style="font-size:10px;color:var(--text-dim)" id="consoleArrow">▶</span>
+
+      <!-- Row 2: variable substitution inputs -->
+      <div class="preview-row-vars">
+        <div class="preview-var-group">
+          <span class="var-label">{{game_rtp}}</span>
+          <input class="var-input" type="text" id="rtpInput" placeholder="93.06" />
+        </div>
+        <div class="preview-var-group">
+          <span class="var-label">{{maxWinnings}}</span>
+          <input class="var-input" type="text" id="maxWinInput" placeholder="250,000.00" />
+        </div>
       </div>
+
+      <!-- Row 3: download actions -->
+      <div class="preview-row-downloads">
+        <button class="btn-dl btn-dl-html" id="dlHtmlBtn">↓ Download current language (.html)</button>
+        <button class="btn-dl btn-dl-zip"  id="dlZipBtn">↓ Download all languages (ZIP)</button>
+      </div>
+
     </div>
-    <div class="console-body" id="consoleBody"></div>
-  </div>
 
-</div><!-- /page -->
+    <iframe id="previewFrame" sandbox="allow-same-origin" title="Help page preview"></iframe>
 
-<script>
-// ─── Config ─────────────────────────────────────────────────
-const HEADER_TO_CODE = {
-  'english (en)':                 'en',
-  'greek (el)':                   'el',
-  'spanish (es)':                 'es',
-  'french canadian (fr-ca)':      'fr-ca',
-  'french (fr)':                  'fr',
-  'italian (it)':                 'it',
-  'dutch (nl)':                   'nl',
-  'portuguese brazilian (pt-br)': 'pt-br',
-  'portuguese (pt)':              'pt-pt',
-  'swedish (se)':                 'sv',
-  // 'english us ct (en-us-ct)': 'en-us-ct',
-};
+  </div><!-- /panel-preview -->
 
-// ─── State ──────────────────────────────────────────────────
-let sheetData = null;
-let langMap   = [];
-let logCount  = 0;
-let consoleOpen = false;
+</div><!-- /app-shell -->
 
-// ─── DOM ────────────────────────────────────────────────────
-const gameNameEl  = document.getElementById('gameName');
-const startRowEl  = document.getElementById('startRow');
-const endRowEl    = document.getElementById('endRow');
-const headerRowEl = document.getElementById('headerRow');
-const generateBtn = document.getElementById('generateBtn');
-const fetchStatus = document.getElementById('fetchStatus');
-const sheetUrlEl  = document.getElementById('sheetUrl');
-const fetchBtn    = document.getElementById('fetchBtn');
-const dropZone    = document.getElementById('dropZone');
-const fileInput   = document.getElementById('fileInput');
-const successCard = document.getElementById('successCard');
-const consoleBody = document.getElementById('consoleBody');
-const consoleCount= document.getElementById('consoleCount');
-
-// ─── Source tabs ─────────────────────────────────────────────
-function switchSrc(tab) {
-  document.querySelectorAll('.src-btn').forEach((b,i)=>b.classList.toggle('active',(i===0)===(tab==='link')));
-  document.getElementById('srcLink').classList.toggle('active', tab==='link');
-  document.getElementById('srcFile').classList.toggle('active', tab==='file');
-}
-
-// ─── Advanced toggle ─────────────────────────────────────────
-function toggleAdv() {
-  const btn  = document.getElementById('advToggle');
-  const body = document.getElementById('advBody');
-  btn.classList.toggle('open');
-  body.classList.toggle('open');
-}
-
-// ─── Console toggle ──────────────────────────────────────────
-function toggleConsole() {
-  consoleOpen = !consoleOpen;
-  consoleBody.classList.toggle('open', consoleOpen);
-  document.getElementById('consoleHead').classList.toggle('open', consoleOpen);
-  document.getElementById('consoleArrow').textContent = consoleOpen ? '▼' : '▶';
-}
-
-function clearConsole(e) {
-  if(e) e.stopPropagation();
-  consoleBody.innerHTML = '';
-  logCount = 0;
-  consoleCount.textContent = '0';
-  consoleCount.classList.remove('has-logs');
-}
-
-// ─── Steps ───────────────────────────────────────────────────
-function setStep(n) {
-  ['step1','step2','step3'].forEach((id,i) => {
-    const el = document.getElementById(id);
-    el.className = 'step-item' + (i+1 < n ? ' done' : i+1 === n ? ' active' : '');
-  });
-  // dot on card 2
-  const dot2 = document.getElementById('dot2');
-  if(n >= 2) { dot2.classList.add('blue'); }
-  if(n >= 3) { dot2.classList.remove('blue'); dot2.classList.add('green'); }
-}
-
-// ─── Google Sheet fetch ──────────────────────────────────────
-async function fetchSheet() {
-  const url = sheetUrlEl.value.trim();
-  if (!url) return;
-
-  const idMatch = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
-  if (!idMatch) { showStatus('err','✗ No spreadsheet ID found in this URL'); return; }
-
-  const sheetId  = idMatch[1];
-  const gidMatch = url.match(/[#&?]gid=(\d+)/);
-  const gid      = gidMatch ? gidMatch[1] : null;
-  let   csvUrl   = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`;
-  if (gid) csvUrl += `&gid=${gid}`;
-
-  showStatus('info','↻ Loading sheet data…');
-  fetchBtn.disabled = true;
-  clog('info', 'Fetching: ' + csvUrl);
-
-  try {
-    const resp = await fetch(csvUrl);
-    if (!resp.ok) {
-      const msg = (resp.status===401||resp.status===403)
-        ? '✗ Access denied — share the sheet as "Anyone with the link → Viewer"'
-        : `✗ HTTP ${resp.status} — could not fetch the sheet`;
-      showStatus('err', msg); clog('error', msg); return;
-    }
-    const rows = parseCSV(await resp.text());
-    onDataLoaded(rows, `Google Sheet (${rows.length} rows)`);
-    showStatus('ok', `✓ Loaded successfully — ${rows.length} rows`);
-  } catch(e) {
-    showStatus('warn','⚠ Could not fetch directly. Use the "Upload .xlsx" option instead.');
-    clog('warn', 'Network/CORS error: ' + e.message);
-  } finally {
-    fetchBtn.disabled = false;
-  }
-}
-
-sheetUrlEl.addEventListener('keydown', e => { if(e.key==='Enter') fetchSheet(); });
-
-function showStatus(type, msg) {
-  fetchStatus.className = `status visible ${type}`;
-  fetchStatus.textContent = msg;
-}
-
-// ─── CSV parser ──────────────────────────────────────────────
-function parseCSV(text) {
-  const rows=[];let row=[],f='',q=false;
-  for(let i=0;i<text.length;i++){
-    const c=text[i],n=text[i+1];
-    if(q){if(c==='"'&&n==='"'){f+='"';i++}else if(c==='"'){q=false}else{f+=c}}
-    else{if(c==='"'){q=true}else if(c===','){row.push(f);f=''}
-    else if(c==='\r'&&n==='\n'){row.push(f);rows.push(row);row=[];f='';i++}
-    else if(c==='\n'||c==='\r'){row.push(f);rows.push(row);row=[];f=''}
-    else{f+=c}}
-  }
-  if(f||row.length){row.push(f);rows.push(row)}
-  return rows;
-}
-
-// ─── File upload ─────────────────────────────────────────────
-dropZone.addEventListener('dragover', e=>{e.preventDefault();dropZone.classList.add('drag-over')});
-dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('drag-over'));
-dropZone.addEventListener('drop',e=>{
-  e.preventDefault();dropZone.classList.remove('drag-over');
-  if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
-});
-fileInput.addEventListener('change',()=>{if(fileInput.files[0])handleFile(fileInput.files[0])});
-
-function handleFile(file) {
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      const wb   = XLSX.read(e.target.result,{type:'array'});
-      const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});
-      onDataLoaded(rows, file.name);
-      dropZone.classList.add('loaded');
-      document.getElementById('dzTitle').textContent = `✓ ${file.name} — ${rows.length} rows loaded`;
-    } catch(err) { clog('error','Failed to read: '+err.message); }
-  };
-  reader.readAsArrayBuffer(file);
-}
-
-// ─── Data loaded ─────────────────────────────────────────────
-function onDataLoaded(rows, source) {
-  sheetData = rows;
-  const name = String((rows[1]&&rows[1][0])||'').trim();
-  if(name && !gameNameEl.value) gameNameEl.value = name;
-  detectLanguages(rows);
-  setStep(2);
-  checkReady();
-  clog('success', `Loaded: ${source}`);
-  if(name) clog('info', `game_name from A2: "${name}"`);
-  clog('info', `Languages detected: ${langMap.map(l=>l.code).join(', ')}`);
-}
-
-// ─── Language detection ──────────────────────────────────────
-function detectLanguages(rows) {
-  const hdr = rows[parseInt(headerRowEl.value,10)-1]||[];
-  langMap = [];
-  hdr.forEach((cell,i)=>{
-    const code = HEADER_TO_CODE[String(cell||'').trim().toLowerCase()];
-    if(code) langMap.push({col:i,code,on:true});
-  });
-  renderLangChips();
-}
-
-function renderLangChips() {
-  const el = document.getElementById('langGrid');
-  el.innerHTML = '';
-  if(!langMap.length){
-    el.innerHTML='<span style="font-family:var(--mono);font-size:11px;color:var(--text-dim)">// none detected</span>';
-    return;
-  }
-  langMap.forEach((lang,i)=>{
-    const lbl = document.createElement('label');
-    lbl.className = 'lang-chip'+(lang.on?' on':'');
-    lbl.innerHTML = `<input type="checkbox" ${lang.on?'checked':''}>${lang.code}`;
-    lbl.querySelector('input').addEventListener('change',e=>{
-      langMap[i].on=e.target.checked;
-      lbl.classList.toggle('on',e.target.checked);
-    });
-    el.appendChild(lbl);
-  });
-}
-
-headerRowEl.addEventListener('change',()=>{
-  if(!sheetData) return;
-  detectLanguages(sheetData);
-  clog('info',`Re-detected from row ${headerRowEl.value}: ${langMap.map(l=>l.code).join(', ')}`);
-});
-
-// ─── Ready check ─────────────────────────────────────────────
-gameNameEl.addEventListener('input', checkReady);
-function checkReady() {
-  const ready = !!(sheetData && gameNameEl.value.trim());
-  generateBtn.disabled = !ready;
-  if(ready) setStep(3);
-}
-
-// ─── Console log ─────────────────────────────────────────────
-function clog(type, msg) {
-  const t = new Date();
-  const ts = `${t.getHours().toString().padStart(2,'0')}:${t.getMinutes().toString().padStart(2,'0')}:${t.getSeconds().toString().padStart(2,'0')}`;
-  const icons = {info:'i',success:'✓',warn:'⚠',error:'✗'};
-  const row = document.createElement('div');
-  row.className = `c-row ${type}`;
-  row.innerHTML = `<span class="c-icon">${icons[type]||'·'}</span><span class="c-msg">${msg}</span><span class="c-time">${ts}</span>`;
-  consoleBody.appendChild(row);
-  consoleBody.scrollTop = consoleBody.scrollHeight;
-  logCount++;
-  consoleCount.textContent = logCount;
-  consoleCount.classList.add('has-logs');
-}
-
-// ─── Generate ────────────────────────────────────────────────
-generateBtn.addEventListener('click', async () => {
-  generateBtn.classList.add('loading');
-  generateBtn.disabled = true;
-  successCard.classList.remove('visible');
-
-  // Auto-open console during generation
-  if(!consoleOpen) toggleConsole();
-
-  try {
-    const gameName    = gameNameEl.value.trim();
-    const startRow    = parseInt(startRowEl.value,10);
-    const endRow      = parseInt(endRowEl.value,10);
-    const activeLangs = langMap.filter(l=>l.on);
-
-    if(!activeLangs.length){ clog('error','No languages selected'); return; }
-
-    clog('info',  `game_name = "${gameName}"`);
-    clog('info',  `rows      = ${startRow}–${endRow}`);
-    clog('info',  `langs     = ${activeLangs.map(l=>l.code).join(', ')}`);
-
-    const sections = parseSections(sheetData.slice(startRow-1,endRow), activeLangs);
-    clog('success', `Parsed ${sections.length} sections`);
-
-    const zip = new JSZip();
-    activeLangs.forEach(lang=>{
-      zip.file(`help_${lang.code}.html`, buildHtml(gameName, sections, lang.col));
-      clog('success', `Built  help_${lang.code}.html`);
-    });
-
-    const blob = await zip.generateAsync({type:'blob'});
-    const safe = gameName.replace(/[^a-zA-Z0-9_\-]/g,'_').replace(/_+/g,'_');
-    const a = Object.assign(document.createElement('a'),{
-      href: URL.createObjectURL(blob), download: `help_pages_${safe}.zip`
-    });
-    a.click(); URL.revokeObjectURL(a.href);
-
-    document.getElementById('successDetail').textContent =
-      `${activeLangs.length} files · ${sections.length} sections · "${gameName}"`;
-    successCard.classList.add('visible');
-    successCard.scrollIntoView({behavior:'smooth', block:'nearest'});
-    clog('success','ZIP download complete ✓');
-
-  } catch(err) {
-    clog('error','Exception: '+err.message);
-  } finally {
-    generateBtn.classList.remove('loading');
-    generateBtn.disabled = false;
-  }
-});
-
-// ─── Parse sections ──────────────────────────────────────────
-function parseSections(block, langs) {
-  const s=[];let cur=null,expT=true;
-  block.forEach(row=>{
-    const blank=langs.every(l=>String(row[l.col]||'').trim()==='');
-    if(blank){if(cur)s.push(cur);cur=null;expT=true;return}
-    if(expT){
-      cur={enTitle:String(row[0]||'').trim(),titleByCol:{},contentByCol:{}};
-      langs.forEach(l=>{cur.titleByCol[l.col]=String(row[l.col]||'').trim();cur.contentByCol[l.col]=[]});
-      expT=false;
-    } else { if(cur) langs.forEach(l=>cur.contentByCol[l.col].push(String(row[l.col]||'').trim())); }
-  });
-  if(cur) s.push(cur);
-  return s;
-}
-
-// ─── Build HTML ──────────────────────────────────────────────
-function buildHtml(gameName, sections, col) {
-  return [
-    '<div id="content-help">',
-    '    <style>',
-    "        #content-help p { font-family: 'Quicksand Regular'; }",
-    "        #content-help h1, #content-help h2, #content-help h3 { font-family: 'Quicksand Bold'; }",
-    '        .visible_false, .not-configured_, .bfs_true { display: none; }',
-    '    </style>',
-    '',
-    '    <div id="help__name" style="text-align: center;">',
-    `        <h1>${esc(gameName)}</h1>`,
-    '    </div>',
-    '',
-    sections.map(s=>buildSection(s,col)).join('\n\n'),
-    '</div>',
-  ].join('\n');
-}
-
-function buildSection(sec, col) {
-  const id=slugify(sec.enTitle), title=sec.titleByCol[col]||'', lines=sec.contentByCol[col]||[];
-  const ind='            ';
-  return [
-    `    <div id="help__${id}">`,
-    `        <h2>${esc(title)}${title?':':''}</h2>`,
-    '',
-    '        <p>',
-    lines.map((l,i)=>ind+processLine(l)+(i<lines.length-1?'\n'+ind+'<br>':'')).join('\n'),
-    '        </p>',
-    '    </div>',
-  ].join('\n');
-}
-
-function processLine(line) {
-  if(!line) return '';
-  if(/\d+[.,]\d+\s*%|\d+\s*%/.test(line))
-    return esc(line.replace(/(\d+[.,]\d+)(\s*%)/,'{{game_rtp}}$2').replace(/(\d+)(\s*%)/,'{{game_rtp}}$2'));
-  const re=/\d{1,3}(?:[,. ]\d{3})+(?:[.,]\d{1,2})?/;
-  if(re.test(line)&&!line.includes('{{maxWinnings}}'))
-    return [`<span class="not-configured_{{maxWinnings}}">`,`                ${esc(line.replace(re,'{{maxWinnings}}'))}`,`            </span>`].join('\n');
-  return esc(line);
-}
-
-function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
-function slugify(t){return t.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'')}
-</script>
+<script type="module" src="/src/main.ts"></script>
 </body>
 </html>
