@@ -4,5 +4,5 @@ export const state: AppState = {
   sheetData: null,
   langMap: [],
   generated: {},
-  defaults: { rtp: '', maxWinnings: '' },
+  params: {},
 };

@@ -2,7 +2,7 @@ import './style.css';
 import { state } from './state.js';
 import { parseCSV, detectLanguages, detectHeaderRow, detectRowRange, markEmptyLanguages } from './parser.js';
 import { generate, downloadZip, downloadSingle } from './generator.js';
-import { openPreview, closePreview, getActiveLang, initPreviewInputs } from './preview.js';
+import { openPreview, closePreview, getActiveLang } from './preview.js';
 import type { LogType } from './types.js';
 
 // ── DOM refs ──────────────────────────────────────────────────
@@ -148,7 +148,7 @@ function onDataLoaded(rows: string[][], source: string): void {
   // Reset all previous session state
   closePreview();
   state.generated = {};
-  state.defaults = { rtp: '', maxWinnings: '' };
+  state.params = {};
   gameNameEl.value = '';
   successCard.classList.remove('visible');
   setStep(1);
@@ -347,4 +347,3 @@ document.querySelectorAll<HTMLButtonElement>('.src-btn').forEach((btn, i) =>
 $('advToggle').addEventListener('click', toggleAdv);
 $('fetchBtn').addEventListener('click', fetchSheet);
 
-initPreviewInputs();

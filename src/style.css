@@ -157,32 +157,53 @@ body {
 /* Row 2: variable substitution */
 .preview-row-vars {
   display: flex;
-  align-items: center;
-  gap: 24px;
-  padding: 12px 18px;
+  flex-direction: column;
   border-bottom: 1px solid var(--border);
+}
+
+.vars-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  padding: 10px 18px;
+}
+
+.vars-group + .vars-group {
+  border-top: 1px solid var(--border);
+}
+
+.vars-group-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  opacity: 0.55;
+  flex-basis: 100%;
+  line-height: 1;
 }
 
 .preview-var-group {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .var-label {
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-dim);
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 .var-input {
-  width: 150px !important;
-  padding: 7px 10px !important;
-  font-size: 13px !important;
+  padding: 5px 8px !important;
+  font-size: 12px !important;
   flex-shrink: 0;
 }
+
+.var-input-main  { width: 140px !important; }
+.var-input-param { width: 76px !important; }
 
 /* Row 3: download buttons */
 .preview-row-downloads {

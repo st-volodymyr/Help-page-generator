@@ -16,7 +16,8 @@ export interface AppState {
   sheetData: string[][] | null;
   langMap: LangEntry[];
   generated: Record<string, string>;
-  defaults: { rtp: string; maxWinnings: string };
+  /** All template params with their extracted default values */
+  params: Record<string, string>;
 }
 
 export type LogType = 'info' | 'success' | 'warn' | 'error';

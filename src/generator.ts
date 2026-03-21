@@ -1,7 +1,43 @@
 import { state } from './state.js';
 import { parseSections, extractDefaults } from './parser.js';
-import { buildHtml } from './builder.js';
+import { buildHtml, slugify } from './builder.js';
 import type { LangEntry, ClogFn } from './types.js';
+
+const PCT_RE = /\d+[.,]\d+\s*%|\d+\s*%/;
+
+function extractParamDefaults(
+  sections: ReturnType<typeof parseSections>,
+  enCol: number,
+  block: string[][],
+): Record<string, string> {
+  const params: Record<string, string> = {};
+
+  sections.forEach(sec => {
+    const id = slugify(sec.enTitle) || 'section';
+    const isMainRtp = id.includes('return');
+    const lines = sec.contentByCol[enCol] ?? [];
+    let rtpCount = 0;
+
+    lines.forEach(line => {
+      if (!PCT_RE.test(line)) return;
+      if (isMainRtp) {
+        // Extract value for the shared {{game_rtp}} param (last writer wins if multiple)
+        const m = line.match(/(\d+[.,]\d+)(?=\s*%)|(\d+)(?=\s*%)/);
+        if (m) params['game_rtp'] = (m[1] ?? m[2] ?? '').replace(',', '.');
+      } else {
+        rtpCount++;
+        const paramName = rtpCount === 1 ? `${id}_rtp` : `${id}_rtp_${rtpCount}`;
+        const m = line.match(/(\d+[.,]\d+)(?=\s*%)|(\d+)(?=\s*%)/);
+        if (m) params[paramName] = (m[1] ?? m[2] ?? '').replace(',', '.');
+      }
+    });
+  });
+
+  const { maxWinnings } = extractDefaults(block, enCol);
+  if (maxWinnings) params['maxWinnings'] = maxWinnings;
+
+  return params;
+}
 
 export function generate(
   gameName: string,
@@ -21,7 +57,7 @@ export function generate(
   });
 
   const enLang = activeLangs.find(l => l.code === 'en') ?? activeLangs[0];
-  state.defaults = extractDefaults(block, enLang.col);
+  state.params = extractParamDefaults(sections, enLang.col, block);
 
   return { sections };
 }

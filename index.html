@@ -194,17 +194,8 @@
         <button class="btn-close-preview" id="closePanelBtn" title="Close preview">✕</button>
       </div>
 
-      <!-- Row 2: variable substitution inputs -->
-      <div class="preview-row-vars">
-        <div class="preview-var-group">
-          <span class="var-label">{{game_rtp}}</span>
-          <input class="var-input" type="text" id="rtpInput" placeholder="93.06" />
-        </div>
-        <div class="preview-var-group">
-          <span class="var-label">{{maxWinnings}}</span>
-          <input class="var-input" type="text" id="maxWinInput" placeholder="250,000.00" />
-        </div>
-      </div>
+      <!-- Row 2: variable substitution inputs (populated dynamically after generate) -->
+      <div class="preview-row-vars" id="previewVarsRow"></div>
 
       <!-- Row 3: download actions -->
       <div class="preview-row-downloads">

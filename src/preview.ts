@@ -5,15 +5,29 @@ let activeLang: string | null = null;
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export function getActiveLang(): string | null { return activeLang; }
 
-export function buildPreviewDoc(rawHtml: string, rtp: string, maxWinnings: string): string {
+export function buildPreviewDoc(rawHtml: string, params: Record<string, string>): string {
   let html = rawHtml;
-  if (rtp)        html = html.replace(/\{\{game_rtp\}\}/g, rtp);
-  if (maxWinnings) {
+
+  // maxWinnings has a special CSS class trick
+  const maxWin = params['maxWinnings'];
+  if (maxWin) {
     html = html.replace(/not-configured_\{\{maxWinnings\}\}/g, 'is-configured');
-    html = html.replace(/\{\{maxWinnings\}\}/g, maxWinnings);
+    html = html.replace(/\{\{maxWinnings\}\}/g, maxWin);
   }
+
+  // Replace all other params generically
+  Object.entries(params).forEach(([key, val]) => {
+    if (key !== 'maxWinnings' && val) {
+      html = html.replace(new RegExp(`\\{\\{${escapeRegex(key)}\\}\\}`, 'g'), val);
+    }
+  });
+
   return `<!DOCTYPE html>
 <html><head><meta charset="UTF-8">
 <style>
@@ -37,25 +51,75 @@ export function buildPreviewDoc(rawHtml: string, rtp: string, maxWinnings: strin
 </head><body><div class="preview-wrap">${html}</div></body></html>`;
 }
 
+function collectParams(): Record<string, string> {
+  const params: Record<string, string> = {};
+  $('previewVarsRow').querySelectorAll<HTMLInputElement>('[data-param]').forEach(input => {
+    params[input.dataset.param!] = input.value.trim();
+  });
+  return params;
+}
+
 function refresh(): void {
   if (!activeLang || !state.generated[activeLang]) return;
   ($<HTMLIFrameElement>('previewFrame')).srcdoc = buildPreviewDoc(
     state.generated[activeLang],
-    $<HTMLInputElement>('rtpInput').value.trim(),
-    $<HTMLInputElement>('maxWinInput').value.trim(),
+    collectParams(),
   );
 }
 
+function makeInput(key: string, inputClass: string): HTMLDivElement {
+  const defaultVal = state.params[key] ?? '';
+  const group = document.createElement('div');
+  group.className = 'preview-var-group';
+
+  const label = document.createElement('span');
+  label.className = 'var-label';
+  label.textContent = `{{${key}}}`;
+
+  const input = document.createElement('input');
+  input.className = `var-input ${inputClass}`;
+  input.type = 'text';
+  input.dataset.param = key;
+  input.placeholder = defaultVal || key;
+  input.value = defaultVal;
+  input.addEventListener('input', refresh);
+
+  group.appendChild(label);
+  group.appendChild(input);
+  return group;
+}
+
+function makeGroupRow(labelText: string, keys: string[], inputClass: string): HTMLDivElement {
+  const row = document.createElement('div');
+  row.className = 'vars-group';
+
+  const lbl = document.createElement('span');
+  lbl.className = 'vars-group-label';
+  lbl.textContent = labelText;
+  row.appendChild(lbl);
+
+  keys.forEach(k => row.appendChild(makeInput(k, inputClass)));
+  return row;
+}
+
 /**
- * @param langs      Active (generated) languages — used for tabs that can be clicked
- * @param allLangs   All detected languages including empty ones — shown as disabled tabs
+ * @param langs      Active (generated) languages
+ * @param allLangs   All detected languages including empty ones
  */
 export function openPreview(langs: LangEntry[], allLangs: LangEntry[]): void {
   activeLang = langs[0].code;
 
-  $<HTMLInputElement>('rtpInput').value    = state.defaults.rtp;
-  $<HTMLInputElement>('maxWinInput').value = state.defaults.maxWinnings;
+  // Build grouped param inputs
+  const varsRow = $('previewVarsRow');
+  varsRow.innerHTML = '';
 
+  const mainKeys   = ['game_rtp', 'maxWinnings'].filter(k => k in state.params);
+  const sectionKeys = Object.keys(state.params).filter(k => !mainKeys.includes(k));
+
+  if (mainKeys.length)    varsRow.appendChild(makeGroupRow('// main', mainKeys, 'var-input-main'));
+  if (sectionKeys.length) varsRow.appendChild(makeGroupRow('// section rtp', sectionKeys, 'var-input-param'));
+
+  // Build language tabs
   const tabsEl = $('previewLangTabs');
   tabsEl.innerHTML = '';
   allLangs.forEach(lang => {
@@ -82,9 +146,4 @@ export function closePreview(): void {
   $('appShell').classList.remove('preview-open');
   ($<HTMLIFrameElement>('previewFrame')).srcdoc = '';
   $('previewLangTabs').innerHTML = '';
-}
-
-export function initPreviewInputs(): void {
-  $('rtpInput').addEventListener('input', refresh);
-  $('maxWinInput').addEventListener('input', refresh);
 }
