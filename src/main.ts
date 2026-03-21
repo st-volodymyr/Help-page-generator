@@ -171,10 +171,10 @@ function onDataLoaded(rows: string[][], source: string): void {
   if (headerRow !== null) {
     headerRowEl.value = String(headerRow);
     setHint('headerRowHint', '// auto-detected', 'var(--green)');
-    clog('info', `Auto-detected header row ${headerRow}`);
+    clog('info', `Auto-detected language row ${headerRow}`);
   } else {
     setHint('headerRowHint', '// not found, enter manually', 'var(--yellow)');
-    clog('warn', 'Header row not detected — no row with ≥2 known language columns found');
+    clog('warn', 'Language row not detected — no row with ≥2 known language columns found');
   }
 
   // 4. Detect content row range
@@ -213,7 +213,7 @@ function redetectLanguages(): void {
   const headerRow = parseInt(headerRowEl.value, 10);
   if (!headerRow) {
     // No header row known yet — clear chips and wait
-    $('langGrid').innerHTML = '<span style="font-family:var(--mono);font-size:11px;color:var(--text-dim)">// enter header row to detect languages</span>';
+    $('langGrid').innerHTML = '<span style="font-family:var(--mono);font-size:11px;color:var(--text-dim)">// enter language row to detect languages</span>';
     state.langMap = [];
     return;
   }
