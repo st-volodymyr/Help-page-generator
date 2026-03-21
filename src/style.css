@@ -654,6 +654,9 @@ input::placeholder { color: var(--border2); }
 .btn-sm:hover:not(:disabled) { border-color: var(--blue); color: var(--blue); }
 .btn-sm:disabled { opacity: 0.4; cursor: not-allowed; }
 
+.input-highlight { border-color: var(--yellow) !important; box-shadow: 0 0 0 2px rgba(229,192,123,0.15) !important; }
+.btn-highlight { border-color: var(--blue) !important; color: var(--blue) !important; background: var(--blue-bg) !important; }
+
 /* ── Success card ── */
 .success-card {
   display: none;

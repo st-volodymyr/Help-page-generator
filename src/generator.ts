@@ -87,7 +87,7 @@ export async function downloadZip(gameName: string, activeLangs: LangEntry[], cl
   clog('success', `ZIP downloaded (${activeLangs.length} files) ✓`);
 }
 
-export function downloadSingle(langCode: string, gameName: string, clog: ClogFn): void {
+export function downloadSingle(langCode: string, _gameName: string, clog: ClogFn): void {
   const html = state.generated[langCode];
   if (!html) { clog('error', `No generated file for "${langCode}"`); return; }
   const blob = new Blob([html], { type: 'text/html' });

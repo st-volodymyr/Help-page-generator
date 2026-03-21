@@ -57,9 +57,8 @@ function clearConsole(e?: Event): void {
 
 // ── Steps ─────────────────────────────────────────────────────
 function setStep(n: number): void {
-  (['step1', 'step2', 'step3'] as const).forEach((id, i) => {
-    $(id).className = 'step-item' + (i + 1 < n ? ' done' : i + 1 === n ? ' active' : '');
-  });
+  $('step1').className = 'step-item' + (n >= 3 ? ' done' : ' active');
+  $('step3').className = 'step-item' + (n >= 3 ? ' active' : '');
   const dot2 = $('dot2');
   if (n >= 2) dot2.classList.add('blue');
   if (n >= 3) { dot2.classList.remove('blue'); dot2.classList.add('green'); }
@@ -308,6 +307,16 @@ $('dlHtmlBtn').addEventListener('click', () => {
   if (!lang) return;
   downloadSingle(lang, gameNameEl.value.trim(), clog);
 });
+
+// ── Load button enable/disable based on URL field ─────────────
+function updateFetchBtn(): void {
+  const hasUrl = sheetUrlEl.value.trim().length > 0;
+  fetchBtn.disabled = !hasUrl;
+  sheetUrlEl.classList.toggle('input-highlight', !hasUrl);
+  fetchBtn.classList.toggle('btn-highlight', hasUrl);
+}
+updateFetchBtn();
+sheetUrlEl.addEventListener('input', updateFetchBtn);
 
 // ── Event wiring ──────────────────────────────────────────────
 sheetUrlEl.addEventListener('keydown', (e: KeyboardEvent) => { if (e.key === 'Enter') fetchSheet(); });
