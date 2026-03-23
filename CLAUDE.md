@@ -83,7 +83,7 @@ To add a language, add both format variants to `HEADER_TO_CODE`.
 
 - **Cell A2**: Game name (auto-filled into the UI)
 - **Language row**: Row with ≥2 known language headers — auto-detected by `detectHeaderRow`
-- **Content block**: Starts at first row containing "How to Play", ends before "©/copyright" — auto-detected by `detectRowRange`
+- **Content block**: Starts at first row containing "How to Play", ends at the "©/copyright" row (inclusive) — auto-detected by `detectRowRange`
 - Blank rows in content block = section breaks; first non-blank row of each block = section title (from col 0 / enTitle)
 - Sheet must be shared as "Anyone with the link can view" for URL-based loading
 

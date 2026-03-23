@@ -86,7 +86,7 @@ export function detectHeaderRow(rows: string[][]): number | null {
 /**
  * Scan the sheet for the content block boundaries:
  *   startRow — first row whose ANY cell contains "how to play" (case-insensitive)
- *   endRow   — last row to include, set to the row before the "© / copyright" line
+ *   endRow   — last row to include, set to the "© / copyright" line (inclusive)
  * Returns 1-based row numbers matching what the UI fields expect.
  * Returns null for either value if not found.
  */
@@ -100,9 +100,8 @@ export function detectRowRange(rows: string[][]): { startRow: number | null; end
       startRow = i + 1; // 1-based; this row is the first included
     }
     if (startRow !== null && (text.includes('©') || text.includes('copyright'))) {
-      // slice(startRow-1, endRow) — to exclude the copyright row itself,
-      // set endRow = i (0-based copyright index = 1-based row before copyright)
-      endRow = i;
+      // include the copyright row itself: 0-based index i → 1-based row i+1
+      endRow = i + 1;
       break;
     }
   }
