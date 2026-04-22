@@ -5,5 +5,12 @@ export default defineConfig({
   build: {
     outDir: 'docs',
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        entryFileNames: 'assets/index.js',
+        chunkFileNames: 'assets/[name].js',
+        assetFileNames: 'assets/index.[ext]',
+      },
+    },
   },
 });
