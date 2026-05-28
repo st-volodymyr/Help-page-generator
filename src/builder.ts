@@ -18,8 +18,9 @@ function isMainRtpSection(slug: string): boolean {
   return slug.includes('return');
 }
 
-export function processLine(line: string, rtpParamName = 'game_rtp'): string {
+export function processLine(line: string, rtpParamName = 'game_rtp', templatize = true): string {
   if (!line) return '';
+  if (!templatize) return esc(line);
   if (PCT_RE.test(line))
     return esc(line
       .replace(/(\d+[.,]\d+)(\s*%)/, `{{${rtpParamName}}}$2`)
@@ -34,7 +35,7 @@ export function processLine(line: string, rtpParamName = 'game_rtp'): string {
   return esc(line);
 }
 
-function buildSection(sec: Section, col: number): string {
+function buildSection(sec: Section, col: number, templatize: boolean): string {
   const id    = slugify(sec.enTitle) || 'section';
   const title = sec.titleByCol[col] ?? '';
   const lines = sec.contentByCol[col] ?? [];
@@ -45,11 +46,11 @@ function buildSection(sec: Section, col: number): string {
 
   const processedLines = lines.map((l, i) => {
     let paramName = 'game_rtp';
-    if (!mainRtp && PCT_RE.test(l)) {
+    if (templatize && !mainRtp && PCT_RE.test(l)) {
       rtpCount++;
       paramName = rtpCount === 1 ? `${id}_rtp` : `${id}_rtp_${rtpCount}`;
     }
-    return ind + processLine(l, paramName) + (i < lines.length - 1 ? '\n' + ind + '<br>' : '');
+    return ind + processLine(l, paramName, templatize) + (i < lines.length - 1 ? '\n' + ind + '<br>' : '');
   });
 
   return [
@@ -63,7 +64,7 @@ function buildSection(sec: Section, col: number): string {
   ].join('\n');
 }
 
-export function buildHtml(gameName: string, sections: Section[], col: number): string {
+export function buildHtml(gameName: string, sections: Section[], col: number, templatize = true): string {
   return [
     '<div id="content-help">',
     '    <style>',
@@ -76,7 +77,7 @@ export function buildHtml(gameName: string, sections: Section[], col: number): s
     `        <h1>${esc(gameName)}</h1>`,
     '    </div>',
     '',
-    sections.map(s => buildSection(s, col)).join('\n\n'),
+    sections.map(s => buildSection(s, col, templatize)).join('\n\n'),
     '</div>',
   ].join('\n');
 }

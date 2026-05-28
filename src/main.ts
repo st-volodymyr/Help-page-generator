@@ -12,6 +12,7 @@ const gameNameEl   = $<HTMLInputElement>('gameName');
 const startRowEl   = $<HTMLInputElement>('startRow');
 const endRowEl     = $<HTMLInputElement>('endRow');
 const headerRowEl  = $<HTMLInputElement>('headerRow');
+const templatizeEl = $<HTMLInputElement>('templatize');
 const generateBtn  = $<HTMLButtonElement>('generateBtn');
 const fetchStatus  = $('fetchStatus');
 const sheetUrlEl   = $<HTMLInputElement>('sheetUrl');
@@ -271,14 +272,16 @@ generateBtn.addEventListener('click', async () => {
     const startRow    = parseInt(startRowEl.value, 10);
     const endRow      = parseInt(endRowEl.value, 10);
     const activeLangs = state.langMap.filter(l => l.on);
+    const templatize  = templatizeEl.checked;
 
     if (!activeLangs.length) { clog('error', 'No languages selected'); return; }
 
     clog('info', `game_name = "${gameName}"`);
     clog('info', `rows      = ${startRow}–${endRow}`);
     clog('info', `langs     = ${activeLangs.map(l => l.code).join(', ')}`);
+    clog('info', `templatize = ${templatize ? 'on ({{...}} placeholders)' : 'off (real values)'}`);
 
-    const { sections } = generate(gameName, startRow, endRow, activeLangs, clog);
+    const { sections } = generate(gameName, startRow, endRow, activeLangs, clog, templatize);
 
     $('successDetail').textContent =
       `${activeLangs.length} files · ${sections.length} sections · "${gameName}"`;

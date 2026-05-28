@@ -45,6 +45,7 @@ export function generate(
   endRow: number,
   activeLangs: LangEntry[],
   clog: ClogFn,
+  templatize = true,
 ): { sections: ReturnType<typeof parseSections> } {
   const block    = state.sheetData!.slice(startRow - 1, endRow);
   const sections = parseSections(block, activeLangs);
@@ -52,12 +53,12 @@ export function generate(
 
   state.generated = {};
   activeLangs.forEach(lang => {
-    state.generated[lang.code] = buildHtml(gameName, sections, lang.col);
+    state.generated[lang.code] = buildHtml(gameName, sections, lang.col, templatize);
     clog('success', `Built  help_${lang.code}.html`);
   });
 
   const enLang = activeLangs.find(l => l.code === 'en') ?? activeLangs[0];
-  state.params = extractParamDefaults(sections, enLang.col, block);
+  state.params = templatize ? extractParamDefaults(sections, enLang.col, block) : {};
 
   return { sections };
 }

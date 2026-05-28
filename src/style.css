@@ -598,6 +598,27 @@ input::placeholder { color: var(--border2); }
 
 .adv-body.open { display: block; }
 
+.adv-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  cursor: pointer;
+  user-select: none;
+}
+.adv-check input { width: 14px; height: 14px; accent-color: var(--blue); cursor: pointer; }
+.adv-check .adv-check-text { font-size: 13px; color: var(--text); }
+.adv-check .adv-check-text code {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--blue);
+}
+.adv-check .lbl-hint {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--border2);
+}
+
 /* ── Generate button ── */
 .btn-generate {
   width: 100%;
