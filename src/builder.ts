@@ -9,7 +9,9 @@ export function slugify(t: string): string {
 }
 
 const PCT_RE   = /\d+[.,]\d+\s*%|\d+\s*%/;
-const MONEY_RE = /\d{1,3}(?:[,. ]\d{3})+(?:[.,]\d{1,2})?/;
+// Trailing (?![\dxX]) rejects bet multipliers like "1.000x" (European
+// thousands separator) so they aren't mistaken for a max-win amount.
+const MONEY_RE = /\d{1,3}(?:[,. ]\d{3})+(?:[.,]\d{1,2})?(?![\dxX])/;
 
 /** Sections whose slug contains 'return' keep the shared {{game_rtp}} template name. */
 function isMainRtpSection(slug: string): boolean {

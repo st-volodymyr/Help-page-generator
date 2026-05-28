@@ -113,7 +113,7 @@ export function detectRowRange(rows: string[][]): { startRow: number | null; end
 export function extractDefaults(block: string[][], enCol: number): { rtp: string; maxWinnings: string } {
   let rtp = '', maxWinnings = '';
   const rtpRe   = /(\d+[.,]\d+)(?=\s*%)|(\d+)(?=\s*%)/;
-  const moneyRe = /\d{1,3}(?:[,. ]\d{3})+(?:[.,]\d{1,2})?/;
+  const moneyRe = /\d{1,3}(?:[,. ]\d{3})+(?:[.,]\d{1,2})?(?![\dxX])/;
   for (const row of block) {
     const cell = String(row[enCol] ?? '').trim();
     if (!rtp && /\d+[.,]\d+\s*%|\d+\s*%/.test(cell)) {
