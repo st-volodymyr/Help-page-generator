@@ -9,9 +9,27 @@ export function slugify(t: string): string {
 }
 
 const PCT_RE   = /\d+[.,]\d+\s*%|\d+\s*%/;
-// Trailing (?![\dxX]) rejects bet multipliers like "1.000x" (European
-// thousands separator) so they aren't mistaken for a max-win amount.
-const MONEY_RE = /\d{1,3}(?:[,. ]\d{3})+(?:[.,]\d{1,2})?(?![\dxX])/;
+// Thousands separators seen in the source sheets: comma, period, plain space and
+// the Unicode spaces the translators actually use — no-break (U+00A0), thin
+// (U+2009) and narrow no-break (U+202F). Matching only the ASCII space silently
+// left fr-ca "10 000" and sv "3 000" untemplatized.
+const SEP      = /[,.\u0020\u00a0\u2009\u202f]/.source;
+// A thousands-separated amount, e.g. "3,000", "3.000", "10 000", "1.234,50".
+const AMOUNT   = String.raw`\d{1,3}(?:${SEP}\d{3})+(?:[.,]\d{1,2})?`;
+// Source cells often bracket the placeholder value ("[3.000]x", "[10 000] fois").
+// The brackets are part of the placeholder and must be consumed by the match,
+// otherwise the output keeps them as "[{{maxWinnings}}]".
+export const MONEY_RE = new RegExp(String.raw`\[\s*${AMOUNT}\s*\]|${AMOUNT}`);
+// A line enumerating several bet multipliers (jackpot tiers such as
+// "25x, 50x, 100x, 200x e 1.000x") is not a max-win statement, even though the
+// European thousands separator makes "1.000x" look like an amount. A genuine
+// max-win line quotes exactly one multiplier, so 2+ of them means "not max win".
+const MULTIPLIER_RE = /\d(?:[.,\s]?\d)*\s*x/gi;
+
+/** True when the line lists several bet multipliers rather than a single max-win amount. */
+export function isMultiplierList(line: string): boolean {
+  return (line.match(MULTIPLIER_RE) ?? []).length >= 2;
+}
 
 /** Sections whose slug contains 'return' keep the shared {{game_rtp}} template name. */
 function isMainRtpSection(slug: string): boolean {
@@ -26,7 +44,7 @@ export function processLine(line: string, rtpParamName = 'game_rtp', templatize 
       .replace(/(\d+[.,]\d+)(\s*%)/, `{{${rtpParamName}}}$2`)
       .replace(/(\d+)(\s*%)/, `{{${rtpParamName}}}$2`)
     );
-  if (MONEY_RE.test(line) && !line.includes('{{maxWinnings}}'))
+  if (MONEY_RE.test(line) && !isMultiplierList(line) && !line.includes('{{maxWinnings}}'))
     return [
       `<span class="not-configured_{{maxWinnings}}">`,
       `                ${esc(line.replace(MONEY_RE, '{{maxWinnings}}'))}`,

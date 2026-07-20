@@ -1,4 +1,5 @@
 import { HEADER_TO_CODE } from './config.js';
+import { MONEY_RE, isMultiplierList } from './builder.js';
 import type { LangEntry, Section } from './types.js';
 
 export function parseCSV(text: string): string[][] {
@@ -113,16 +114,16 @@ export function detectRowRange(rows: string[][]): { startRow: number | null; end
 export function extractDefaults(block: string[][], enCol: number): { rtp: string; maxWinnings: string } {
   let rtp = '', maxWinnings = '';
   const rtpRe   = /(\d+[.,]\d+)(?=\s*%)|(\d+)(?=\s*%)/;
-  const moneyRe = /\d{1,3}(?:[,. ]\d{3})+(?:[.,]\d{1,2})?(?![\dxX])/;
   for (const row of block) {
     const cell = String(row[enCol] ?? '').trim();
     if (!rtp && /\d+[.,]\d+\s*%|\d+\s*%/.test(cell)) {
       const m = cell.match(rtpRe);
       if (m) rtp = (m[1] ?? m[2] ?? '').replace(',', '.');
     }
-    if (!maxWinnings) {
-      const m = cell.match(moneyRe);
-      if (m) maxWinnings = m[0];
+    if (!maxWinnings && !isMultiplierList(cell)) {
+      const m = cell.match(MONEY_RE);
+      // Strip the placeholder brackets: "[3.000]" -> "3.000".
+      if (m) maxWinnings = m[0].replace(/^\[\s*|\s*\]$/g, '');
     }
     if (rtp && maxWinnings) break;
   }
