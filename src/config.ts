@@ -48,6 +48,8 @@ export const HEADER_TO_CODE: Record<string, string> = {
   'pt portuguese':                     'pt-pt',
   'pt - portuguese':                   'pt-pt',
   'pt-pt - portuguese':                'pt-pt',
+  'pt-pt - portuguese european':       'pt-pt',
   'se - sweedish':                     'sv',
   'se - swedish':                      'sv',
+  'sv - swedish':                      'sv',
 };
