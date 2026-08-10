@@ -39,10 +39,16 @@ not in `langs`, and stale `help_*.html` files worth deleting.
 Optional per-game convenience script in the game's `package.json`:
 
 ```json
-"scripts": { "help:gen": "npx github:st-volodymyr/Help-page-generator" }
+"scripts": { "help:gen": "npm exec --yes --package=github:st-volodymyr/Help-page-generator -- help-page-generator" }
 ```
 
-then: `npm run help:gen -- <sheet-url>`.
+then: `npm run help:gen -- "<sheet-url>"` (quote the URL — it contains `&`/`#`).
+
+The explicit `npm exec … -- help-page-generator` form is deliberate: plain
+`npx github:…` silently runs nothing on some npm versions (default-bin
+inference bug). Note for PowerShell users passing extra *flags* through
+`npm run`: PowerShell swallows the first `--`, so double it —
+`npm run help:gen -- -- <src> --values` (positional-only args don't need this).
 
 ## Web usage
 
