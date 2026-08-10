@@ -26,7 +26,10 @@ export const HEADER_TO_CODE: Record<string, string> = {
   'dutch (nl)':                   'nl',
   'portuguese brazilian (pt-br)': 'pt-br',
   'portuguese (pt)':              'pt-pt',
+  'portuguese (pt-pt)':           'pt-pt',
+  'portuguese european (pt-pt)':  'pt-pt',
   'swedish (se)':                 'sv',
+  'swedish (sv)':                 'sv',
 
   // ── Format B: "CODE - Language name" (from en-ct sheets) ──────
   'en - english':                      'en',

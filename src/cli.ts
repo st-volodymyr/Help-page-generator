@@ -250,9 +250,11 @@ async function main(): Promise<void> {
     updated.push(lang.code);
   }
 
-  const written = new Set(updated.map(c => `help_${c}.html`));
+  // A wanted lang whose column is missing already got a warning above —
+  // its file is intentionally untouched, not stale.
+  const keep = new Set(wanted.map(c => `help_${c}.html`));
   const stale = readdirSync(outDir)
-    .filter(f => /^help_.+\.html$/.test(f) && !written.has(f));
+    .filter(f => /^help_.+\.html$/.test(f) && !keep.has(f));
 
   console.log('');
   console.log(`✓ Updated (${updated.length}): ${updated.join(', ')}`);

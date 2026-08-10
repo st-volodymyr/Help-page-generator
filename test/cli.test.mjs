@@ -30,8 +30,10 @@ function test(name, fn) {
 
 const tmp = mkdtempSync(join(tmpdir(), 'help-cli-'));
 try {
-  // Pre-existing files: one that will be regenerated, one stale.
+  // Pre-existing files: help_it.html is stale (not in langs); help_nl.html
+  // belongs to a wanted lang whose column is missing — warned, not stale.
   writeFileSync(join(tmp, 'help_it.html'), 'old');
+  writeFileSync(join(tmp, 'help_nl.html'), 'old');
 
   const r1 = run([fixture, '--out', tmp, '--langs', 'el,es,nl']);
 
@@ -51,6 +53,10 @@ try {
     assert.match(r1.out, /Skipped.*(en-us-ct|fr)/));
   test('reports stale files', () =>
     assert.match(r1.out, /Stale.*help_it\.html/));
+  test('warned langs are not listed as stale', () =>
+    assert.doesNotMatch(r1.out, /Stale.*help_nl\.html/));
+  test('help_nl.html left untouched', () =>
+    assert.equal(readFileSync(join(tmp, 'help_nl.html'), 'utf8'), 'old'));
   test('game name auto-detected from A2', () =>
     assert.match(readFileSync(join(tmp, 'help_en.html'), 'utf8'), /<h1>Test Dragon Game<\/h1>/));
   test('placeholders kept by default', () => {
@@ -111,6 +117,15 @@ try {
   test('--rows out of range fails', () => {
     assert.notEqual(r6.code, 0);
     assert.match(r6.out, /Invalid row range/);
+  });
+
+  // "Portuguese (PT-PT)" / "Swedish (SV)" header variants map correctly.
+  const ptsv = join(root, 'test', 'fixtures', 'sample-pt-sv.csv');
+  const r12 = run([ptsv, '--out', tmp, '--langs', 'pt-pt,sv', '--yes']);
+  test('PT-PT and SV header variants are recognised', () => {
+    assert.equal(r12.code, 0, r12.out);
+    assert.match(r12.out, /Updated \(3\): en, pt-pt, sv/);
+    assert.match(readFileSync(join(tmp, 'help_sv.html'), 'utf8'), /Snurra hjulen/);
   });
 
   const r3 = run([fixture, '--out', join(tmp, 'nope')]);
