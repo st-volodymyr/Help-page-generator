@@ -10,8 +10,8 @@
 export const HEADER_TO_CODE: Record<string, string> = {
   // ── Format A: "Language (Code)" ───────────────────────────────
   'english (en)':                 'en',
-  'english ct (en-ct)':           'en-ct',
-  'english us ct (en-us-ct)':     'en-ct',
+  'english ct (en-ct)':           'en-us-ct',
+  'english us ct (en-us-ct)':     'en-us-ct',
   'english-social (en-sc)':       'en-SOCIAL',
   'english - social (en-sc)':     'en-SOCIAL',
   'english social (en-sc)':       'en-SOCIAL',
@@ -30,7 +30,7 @@ export const HEADER_TO_CODE: Record<string, string> = {
 
   // ── Format B: "CODE - Language name" (from en-ct sheets) ──────
   'en - english':                      'en',
-  'en-ct - english connecticut':       'en-ct',
+  'en-ct - english connecticut':       'en-us-ct',
   'en-sc - english social':            'en-SOCIAL',
   'en-sc - english (social casino)':   'en-SOCIAL',
   'de-sc - german social':             'de-SOCIAL',
