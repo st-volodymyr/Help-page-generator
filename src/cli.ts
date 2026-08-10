@@ -10,10 +10,10 @@
 import { readFileSync, existsSync, readdirSync, writeFileSync, statSync } from 'node:fs';
 import { resolve, join, extname } from 'node:path';
 import { createInterface } from 'node:readline/promises';
-import * as XLSX from 'xlsx';
 import {
   parseCSV, detectHeaderRow, detectRowRange, detectLanguages, markEmptyLanguages, parseSections,
 } from './parser.js';
+import { sheetToCsvUrl } from './sheetUrl.js';
 import { buildHtml } from './builder.js';
 import type { LangEntry } from './types.js';
 
@@ -25,7 +25,7 @@ Usage: npx github:st-volodymyr/Help-page-generator <source> [options]
                       If omitted, the CLI asks for it.
 
 Options:
-  --out <dir>         Output folder (default: ./help). Must already exist.
+  --out <dir>         Output folder (default: help/ under --game). Must already exist.
   --game <dir>        Game repo root containing package.json (default: current dir)
   --langs a,b,c       Override the language list (skips package.json lookup)
   --values            Write real values instead of {{...}} placeholders
@@ -44,7 +44,7 @@ terminals and IDE run windows alike; with --yes, or when stdin is closed
 
 interface Args {
   source: string;
-  out: string;
+  out: string | null;
   game: string;
   langs: string[] | null;
   values: boolean;
@@ -59,7 +59,7 @@ function fail(msg: string): never {
 }
 
 function parseArgs(argv: string[]): Args {
-  const a: Args = { source: '', out: './help', game: '.', langs: null, values: false, name: null, rows: null, yes: false };
+  const a: Args = { source: '', out: null, game: '.', langs: null, values: false, name: null, rows: null, yes: false };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     const next = (flag: string): string => {
@@ -117,25 +117,18 @@ function makePrompter() {
       if (buffered.length) { answer = buffered.shift()!; process.stdout.write(`${answer}\n`); }
       else if (closed) { answer = null; process.stdout.write('\n'); }
       else answer = await new Promise<string | null>(res => { waiting = res; });
-      return (answer ?? '').trim().replace(/^["']|["']$/g, '') || current;
+      // Strip only a *paired* surrounding quote (Windows "Copy as path"), so a
+      // value legitimately ending in a quote/apostrophe survives.
+      return (answer ?? '').trim().replace(/^(["'])(.*)\1$/, '$2') || current;
     },
     close(): void { rl?.close(); },
   };
 }
 
-/** Extract sheet id + gid from any Google Sheets URL form. */
-function sheetCsvUrl(url: string): string {
-  const idMatch = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
-  if (!idMatch) fail('Could not extract a spreadsheet id from the URL.');
-  let csvUrl = `https://docs.google.com/spreadsheets/d/${idMatch[1]}/export?format=csv`;
-  const gid = url.match(/[#&?]gid=(\d+)/);
-  if (gid) csvUrl += `&gid=${gid[1]}`;
-  return csvUrl;
-}
-
 async function loadRows(source: string): Promise<string[][]> {
   if (/^https?:\/\//.test(source)) {
-    const csvUrl = sheetCsvUrl(source);
+    const csvUrl = sheetToCsvUrl(source);
+    if (!csvUrl) fail('Could not extract a spreadsheet id from the URL.');
     console.log(`Fetching ${csvUrl}`);
     const resp = await fetch(csvUrl, { redirect: 'follow' });
     if (!resp.ok) {
@@ -158,8 +151,12 @@ async function loadRows(source: string): Promise<string[][]> {
   const path = resolve(source);
   if (!existsSync(path)) fail(`File not found: ${path}`);
   if (extname(path).toLowerCase() === '.xlsx') {
+    // Lazy: xlsx's module init is heavy and the URL/.csv paths never need it.
+    const XLSX = await import('xlsx');
     const wb = XLSX.read(readFileSync(path), { type: 'buffer' });
-    return XLSX.utils.sheet_to_json<string[]>(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '' })
+    // raw:false → formatted cell text ("96.22%", "3,000"), matching what the
+    // CSV export yields; raw values (0.9622, 3000) would break templatization.
+    return XLSX.utils.sheet_to_json<string[]>(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '', raw: false })
       .map(row => row.map(cell => String(cell ?? '')));
   }
   return parseCSV(readFileSync(path, 'utf8'));
@@ -190,7 +187,7 @@ async function main(): Promise<void> {
     if (!args.source) fail(`Missing <source>.\n${USAGE}`);
   }
 
-  const outDir = resolve(args.out);
+  const outDir = resolve(args.out ?? join(args.game, 'help'));
   if (!existsSync(outDir) || !statSync(outDir).isDirectory()) {
     fail(`Output folder does not exist: ${outDir}\n  Create it first, or point --out at the game's help/ folder.`);
   }
@@ -201,15 +198,17 @@ async function main(): Promise<void> {
   const headerRow = detectHeaderRow(rows);
   if (headerRow === null) fail('Could not find the language header row (need at least 2 known language headers).');
   const { startRow, endRow } = detectRowRange(rows);
-  if (!args.rows && (startRow === null || endRow === null)) {
+  // With --yes there is nobody to ask; interactively the Start/End row prompts
+  // below exist precisely to correct failed/wrong detection.
+  if (!args.rows && args.yes && (startRow === null || endRow === null)) {
     fail('Could not detect the content block ("How to Play" … "© copyright").\n  Pass --rows start:end to set it explicitly.');
   }
 
   const langMap = detectLanguages(rows, headerRow);
 
   let gameName = args.name ?? String(rows[1]?.[0] ?? '').trim();
-  let contentStart = args.rows?.start ?? startRow!;
-  let contentEnd = args.rows?.end ?? endRow!;
+  let contentStart = args.rows?.start ?? startRow ?? NaN;
+  let contentEnd = args.rows?.end ?? endRow ?? NaN;
 
   // Detection is often wrong on non-standard sheets (junk in A2, shifted
   // blocks) — confirm interactively unless --yes. stdin may be a pipe rather
@@ -218,11 +217,15 @@ async function main(): Promise<void> {
   if (!args.yes) {
     console.log('Detected settings — press Enter to accept, or type a correction:');
     gameName = await prompt.ask('  Game name', gameName);
-    const first = rows[contentStart - 1]?.find(c => String(c).trim()) ?? '';
-    const last  = rows[contentEnd - 1]?.find(c => String(c).trim()) ?? '';
-    console.log(`  Row ${contentStart}: "${String(first).slice(0, 60)}" … row ${contentEnd}: "${String(last).slice(0, 60)}"`);
-    contentStart = Number(await prompt.ask('  Start row', String(contentStart)));
-    contentEnd   = Number(await prompt.ask('  End row', String(contentEnd)));
+    if (Number.isInteger(contentStart) && Number.isInteger(contentEnd)) {
+      const first = rows[contentStart - 1]?.find(c => String(c).trim()) ?? '';
+      const last  = rows[contentEnd - 1]?.find(c => String(c).trim()) ?? '';
+      console.log(`  Row ${contentStart}: "${String(first).slice(0, 60)}" … row ${contentEnd}: "${String(last).slice(0, 60)}"`);
+    } else {
+      console.log('  Content block not auto-detected ("How to Play" … "© copyright") — enter the rows manually:');
+    }
+    contentStart = Number(await prompt.ask('  Start row', Number.isInteger(contentStart) ? String(contentStart) : ''));
+    contentEnd   = Number(await prompt.ask('  End row', Number.isInteger(contentEnd) ? String(contentEnd) : ''));
     const mode = await prompt.ask('  Values mode — {{...}} placeholders or real values (p/v)', args.values ? 'v' : 'p');
     args.values = /^v/i.test(mode);
   }

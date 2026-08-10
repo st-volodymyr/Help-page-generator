@@ -1,6 +1,7 @@
 import './style.css';
 import { state } from './state.js';
 import { parseCSV, detectLanguages, detectHeaderRow, detectRowRange, markEmptyLanguages } from './parser.js';
+import { sheetToCsvUrl } from './sheetUrl.js';
 import { generate, downloadZip, downloadSingle } from './generator.js';
 import { openPreview, closePreview, getActiveLang } from './preview.js';
 import type { LogType } from './types.js';
@@ -85,14 +86,8 @@ async function fetchSheet(): Promise<void> {
   const url = sheetUrlEl.value.trim();
   if (!url) return;
 
-  const idMatch = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
-  if (!idMatch) { showStatus('err', '✗ No spreadsheet ID found in this URL'); return; }
-
-  const sheetId  = idMatch[1];
-  const gidMatch = url.match(/[#&?]gid=(\d+)/);
-  const gid      = gidMatch?.[1] ?? null;
-  let   csvUrl   = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`;
-  if (gid) csvUrl += `&gid=${gid}`;
+  const csvUrl = sheetToCsvUrl(url);
+  if (!csvUrl) { showStatus('err', '✗ No spreadsheet ID found in this URL'); return; }
 
   showStatus('info', '↻ Loading sheet data…');
   fetchBtn.disabled = true;

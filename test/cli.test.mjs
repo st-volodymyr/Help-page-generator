@@ -4,7 +4,7 @@
  * lang filtering, the en-us-ct filename, --values mode, and the summary.
  */
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -126,6 +126,76 @@ try {
   test('--rows out of range fails', () => {
     assert.notEqual(r6.code, 0);
     assert.match(r6.out, /Invalid row range/);
+  });
+
+  // --game defaults --out to <game>/help and reads that package.json.
+  const gameDir = join(tmp, 'game');
+  mkdirSync(join(gameDir, 'help'), { recursive: true });
+  writeFileSync(join(gameDir, 'package.json'), JSON.stringify({ l10ntool: { langs: ['es'] } }));
+  const r14 = run([fixture, '--game', gameDir, '--yes']);
+  test('--game retargets both package.json and default --out', () => {
+    assert.equal(r14.code, 0, r14.out);
+    assert.ok(existsSync(join(gameDir, 'help', 'help_es.html')), 'help_es.html not in game/help');
+    assert.ok(!existsSync(join(gameDir, 'help', 'help_el.html')), 'el not in that game langs');
+  });
+
+  // Unknown header spelling falls back to the (CODE) extractor.
+  const fiCsv = join(tmp, 'fi.csv');
+  writeFileSync(fiCsv, [
+    'Help pages,,',
+    'FI Game,,',
+    ',English (EN),Finnish (FI)',
+    'How to Play,How to Play,Näin pelaat',
+    'Spin.,Spin.,Pyöräytä.',
+    ',,',
+    'Copyright,© copyright,© copyright',
+  ].join('\n'));
+  const r15 = run([fiCsv, '--out', tmp, '--langs', 'fi', '--yes']);
+  test('unmapped header "Finnish (FI)" resolves via fallback extractor', () => {
+    assert.equal(r15.code, 0, r15.out);
+    assert.match(readFileSync(join(tmp, 'help_fi.html'), 'utf8'), /Pyöräytä/);
+  });
+
+  // .xlsx path uses formatted text, not raw numbers (raw:false).
+  const XLSX = await import('xlsx');
+  const xlsxPath = join(tmp, 'sample.xlsx');
+  {
+    const ws = XLSX.utils.aoa_to_sheet([
+      ['Help pages', '', ''], ['XLSX Game', '', ''],
+      ['', 'English (EN)', 'Greek (EL)'],
+      ['How to Play', 'How to Play', 'Πώς να παίξετε'],
+      ['rtp', 'placeholder', 'Το RTP είναι 96.22%.'],
+      ['max', 'The maximum win is 3,000x the bet.', 'Η μέγιστη νίκη είναι 3,000x.'],
+      ['', '', ''],
+      ['Copyright', '© copyright', '© copyright'],
+    ]);
+    // Percent-formatted numeric cell: raw value 0.9622, displays "96.22%".
+    ws['B5'] = { t: 'n', v: 0.9622, z: '0.00%' };
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+    XLSX.writeFile(wb, xlsxPath);
+  }
+  const r16 = run([xlsxPath, '--out', tmp, '--langs', 'en', '--yes']);
+  test('.xlsx formatted numbers templatize like CSV', () => {
+    assert.equal(r16.code, 0, r16.out);
+    const html = readFileSync(join(tmp, 'help_en.html'), 'utf8');
+    assert.match(html, /\{\{how_to_play_rtp\}\}%/);
+    assert.match(html, /\{\{maxWinnings\}\}/);
+  });
+
+  // Failed content-block detection asks for rows instead of failing (interactive).
+  const noHow = join(tmp, 'nohow.csv');
+  writeFileSync(noHow, readFileSync(fixture, 'utf8').replace(/How to Play/g, 'Getting Started'));
+  const r17 = run([noHow, '--out', tmp, '--langs', 'es'], { input: '\n6\n13\n\n' });
+  test('failed detection prompts for rows interactively', () => {
+    assert.equal(r17.code, 0, r17.out);
+    assert.match(r17.out, /not auto-detected/);
+    assert.match(r17.out, /rows 6–13/);
+  });
+  const r18 = run([noHow, '--out', tmp, '--langs', 'es', '--yes']);
+  test('failed detection with --yes still fails fast', () => {
+    assert.notEqual(r18.code, 0);
+    assert.match(r18.out, /--rows/);
   });
 
   // "Portuguese (PT-PT)" / "Swedish (SV)" header variants map correctly.

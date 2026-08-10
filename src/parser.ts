@@ -1,4 +1,4 @@
-import { HEADER_TO_CODE } from './config.js';
+import { headerToCode } from './config.js';
 import { MONEY_RE, isMultiplierList } from './builder.js';
 import type { LangEntry, Section } from './types.js';
 
@@ -26,7 +26,7 @@ export function detectLanguages(rows: string[][], headerRow: number): LangEntry[
   const hdr = rows[headerRow - 1] ?? [];
   const langMap: LangEntry[] = [];
   hdr.forEach((cell, i) => {
-    const code = HEADER_TO_CODE[String(cell ?? '').trim().toLowerCase()];
+    const code = headerToCode(String(cell ?? ''));
     if (code) langMap.push({ col: i, code, on: true, empty: false });
   });
   return langMap;
@@ -76,9 +76,7 @@ export function parseSections(block: string[][], langs: LangEntry[]): Section[] 
  */
 export function detectHeaderRow(rows: string[][]): number | null {
   for (let i = 0; i < rows.length; i++) {
-    const matches = rows[i].filter(cell =>
-      HEADER_TO_CODE[String(cell ?? '').trim().toLowerCase()]
-    );
+    const matches = rows[i].filter(cell => headerToCode(String(cell ?? '')));
     if (matches.length >= 2) return i + 1; // 1-based
   }
   return null;

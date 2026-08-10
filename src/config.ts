@@ -56,3 +56,28 @@ export const HEADER_TO_CODE: Record<string, string> = {
   'se - swedish':                      'sv',
   'sv - swedish':                      'sv',
 };
+
+/** Raw codes that differ from the code our games/filenames use. */
+const CODE_ALIAS: Record<string, string> = {
+  'en-ct': 'en-us-ct',
+  'pt':    'pt-pt',
+  'se':    'sv',
+  'en-sc': 'en-SOCIAL',
+  'de-sc': 'de-SOCIAL',
+};
+
+/**
+ * Header cell text → language code. Exact HEADER_TO_CODE entries win; unknown
+ * spellings fall back to extracting the code from "Language (CODE)" or
+ * "CODE - Language" forms, so a new sheet variant ("Swedish(SV)",
+ * "Portuguese (PT-PT )") works without a config change.
+ */
+export function headerToCode(raw: string): string | null {
+  const t = String(raw ?? '').trim().toLowerCase();
+  if (!t) return null;
+  if (HEADER_TO_CODE[t]) return HEADER_TO_CODE[t];
+  const m = t.match(/\(\s*([a-z]{2}(?:-[a-z]{2,6})?)\s*\)\s*$/)   // "Language (CODE)"
+         ?? t.match(/^([a-z]{2}(?:-[a-z]{2,6})?)\s*-\s+\S/);       // "CODE - Language"
+  if (!m) return null;
+  return CODE_ALIAS[m[1]] ?? m[1];
+}

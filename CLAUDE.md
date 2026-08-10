@@ -83,7 +83,7 @@ Input (Google Sheets URL or .xlsx upload)
 
 ## Supported Languages
 
-`en`, `en-ct`, `el`, `es`, `fr-ca`, `fr`, `it`, `nl`, `pt-br`, `pt-pt`, `sv`
+`en`, `en-us-ct`, `el`, `es`, `fr-ca`, `fr`, `it`, `nl`, `pt-br`, `pt-pt`, `sv`
 
 Two header formats in `HEADER_TO_CODE` (`src/config.ts`):
 - Format A: `"English (EN)"`, `"Spanish (ES)"` …
