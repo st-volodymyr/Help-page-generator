@@ -1,10 +1,41 @@
 # Help Page Generator
 
-Browser-based tool for generating localised help page HTML files from a Google Sheets translations spreadsheet.
+Tool for generating localised help page HTML files from a Google Sheets translations spreadsheet. Two ways to use it: the browser tool (with live preview) or the CLI (writes files straight into a game repo).
 
 🔗 **Live tool:** https://st-volodymyr.github.io/Help-page-generator/
 
-## Usage
+## CLI usage
+
+From a game repo root (any dev, nothing to install — only Node 18+):
+
+```bash
+npx github:st-volodymyr/Help-page-generator <sheet-url | file.xlsx | file.csv> [options]
+```
+
+Files are written straight into the game's `help/` folder. Languages are taken
+from the game's `package.json` → `l10ntool.langs`, plus `en` (always).
+
+| Option | Meaning |
+|---|---|
+| `--out <dir>` | Output folder (default `./help`, must exist) |
+| `--game <dir>` | Game repo root with `package.json` (default: current dir) |
+| `--langs a,b,c` | Override the language list entirely |
+| `--values` | Write real values instead of `{{...}}` placeholders (same as unchecking "templatize" in the web tool) |
+| `--name "Game"` | Override the auto-detected game name (cell A2) |
+
+The run ends with a summary: updated files, warnings (lang in `langs` but
+missing/empty in the sheet — existing file untouched), skipped sheet columns
+not in `langs`, and stale `help_*.html` files worth deleting.
+
+Optional per-game convenience script in the game's `package.json`:
+
+```json
+"scripts": { "help:gen": "npx github:st-volodymyr/Help-page-generator" }
+```
+
+then: `npm run help:gen -- <sheet-url>`.
+
+## Web usage
 
 1. Open the tool URL above
 2. Paste your Google Sheet link **or** upload the `.xlsx` export — game name, row range, and language row are auto-detected
@@ -35,7 +66,7 @@ The preview panel lets you substitute live values for all detected parameters be
 
 ## Supported languages
 
-`en` · `en-ct` · `el` · `es` · `fr-ca` · `fr` · `it` · `nl` · `pt-br` · `pt-pt` · `sv`
+`en` · `en-us-ct` · `el` · `es` · `fr-ca` · `fr` · `it` · `nl` · `pt-br` · `pt-pt` · `sv`
 
 Two header formats are supported:
 - Format A: `English (EN)`, `Spanish (ES)` …

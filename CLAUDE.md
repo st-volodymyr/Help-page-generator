@@ -10,7 +10,19 @@ npm run dev          # dev server with HMR (http://localhost:5173)
 npm run build        # production build → docs/  (commit docs/ to deploy)
 npm run preview      # serve the docs/ build locally
 npm run typecheck    # tsc --noEmit (no output = clean)
+npm run build:cli    # bundle src/cli.ts → bin/cli.cjs (also runs on `prepare`)
+npm run test:cli     # build CLI + run smoke tests (test/cli.test.mjs)
 ```
+
+## CLI
+
+`src/cli.ts` is a Node CLI over the same parser/builder. Devs run it from a
+game repo via `npx github:st-volodymyr/Help-page-generator <sheet-url|xlsx|csv>`;
+npm clones the repo, `prepare` bundles `bin/cli.cjs` (esbuild, CJS, xlsx
+bundled in), and the `files` field ships only `bin/`. Languages come from the
+game's `package.json` → `l10ntool.langs` plus `en` always; `--values` mirrors
+the web "templatize" checkbox (off = real values). `bin/` is gitignored —
+never commit it.
 
 ## Deployment
 
