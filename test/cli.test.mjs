@@ -70,6 +70,17 @@ try {
     assert.doesNotMatch(html, /\{\{/);
   });
 
+  const r5 = run([fixture, '--out', tmp, '--langs', 'es', '--rows', '6:13']);
+  test('--rows override produces the same content block', () => {
+    assert.equal(r5.code, 0, r5.out);
+    assert.match(r5.out, /rows 6–13/);
+  });
+  const r6 = run([fixture, '--out', tmp, '--langs', 'es', '--rows', '10:9999']);
+  test('--rows out of range fails', () => {
+    assert.notEqual(r6.code, 0);
+    assert.match(r6.out, /Invalid row range/);
+  });
+
   const r3 = run([fixture, '--out', join(tmp, 'nope')]);
   test('missing --out folder fails with a hint', () => {
     assert.notEqual(r3.code, 0);

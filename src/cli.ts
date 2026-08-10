@@ -9,6 +9,7 @@
  */
 import { readFileSync, existsSync, readdirSync, writeFileSync, statSync } from 'node:fs';
 import { resolve, join, extname } from 'node:path';
+import { createInterface } from 'node:readline/promises';
 import * as XLSX from 'xlsx';
 import {
   parseCSV, detectHeaderRow, detectRowRange, detectLanguages, markEmptyLanguages, parseSections,
@@ -29,7 +30,13 @@ Options:
   --values            Write real values instead of {{...}} placeholders
                       (same as unchecking "templatize" in the web tool)
   --name "Game Name"  Override the auto-detected game name (sheet cell A2)
+  --rows 6:13         Override the detected content rows (start:end, 1-based)
+  -y, --yes           Accept detected game name / rows without asking
   -h, --help          Show this help
+
+Before generating, the CLI shows the detected game name and row range and
+asks to confirm — press Enter to accept, or type a correction. Prompts are
+skipped with --yes or when there is no interactive terminal (CI).
 `;
 
 interface Args {
@@ -39,6 +46,8 @@ interface Args {
   langs: string[] | null;
   values: boolean;
   name: string | null;
+  rows: { start: number; end: number } | null;
+  yes: boolean;
 }
 
 function fail(msg: string): never {
@@ -47,7 +56,7 @@ function fail(msg: string): never {
 }
 
 function parseArgs(argv: string[]): Args {
-  const a: Args = { source: '', out: './help', game: '.', langs: null, values: false, name: null };
+  const a: Args = { source: '', out: './help', game: '.', langs: null, values: false, name: null, rows: null, yes: false };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     const next = (flag: string): string => {
@@ -61,6 +70,12 @@ function parseArgs(argv: string[]): Args {
     else if (arg === '--langs')  a.langs = next(arg).split(',').map(s => s.trim()).filter(Boolean);
     else if (arg === '--values') a.values = true;
     else if (arg === '--name')   a.name = next(arg);
+    else if (arg === '--rows') {
+      const m = next(arg).match(/^(\d+)[:\-](\d+)$/);
+      if (!m) fail('--rows expects start:end, e.g. --rows 6:13');
+      a.rows = { start: Number(m[1]), end: Number(m[2]) };
+    }
+    else if (arg === '-y' || arg === '--yes') a.yes = true;
     else if (arg.startsWith('-')) fail(`Unknown option: ${arg}\n${USAGE}`);
     else if (!a.source) a.source = arg;
     else fail(`Unexpected argument: ${arg}\n${USAGE}`);
@@ -140,15 +155,40 @@ async function main(): Promise<void> {
   const headerRow = detectHeaderRow(rows);
   if (headerRow === null) fail('Could not find the language header row (need at least 2 known language headers).');
   const { startRow, endRow } = detectRowRange(rows);
-  if (startRow === null || endRow === null) {
-    fail('Could not detect the content block ("How to Play" … "© copyright").');
+  if (!args.rows && (startRow === null || endRow === null)) {
+    fail('Could not detect the content block ("How to Play" … "© copyright").\n  Pass --rows start:end to set it explicitly.');
   }
 
   const langMap = detectLanguages(rows, headerRow);
-  markEmptyLanguages(langMap, rows, startRow, endRow);
 
-  const gameName = args.name ?? String(rows[1]?.[0] ?? '').trim();
+  let gameName = args.name ?? String(rows[1]?.[0] ?? '').trim();
+  let contentStart = args.rows?.start ?? startRow!;
+  let contentEnd = args.rows?.end ?? endRow!;
+
+  // Detection is often wrong on non-standard sheets (junk in A2, shifted
+  // blocks) — confirm interactively unless --yes or no TTY (CI).
+  if (!args.yes && process.stdin.isTTY) {
+    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    const ask = async (label: string, current: string): Promise<string> =>
+      (await rl.question(`${label} [${current}]: `)).trim() || current;
+
+    console.log('Detected settings — press Enter to accept, or type a correction:');
+    gameName = await ask('  Game name', gameName);
+    const first = rows[contentStart - 1]?.find(c => String(c).trim()) ?? '';
+    const last  = rows[contentEnd - 1]?.find(c => String(c).trim()) ?? '';
+    console.log(`  Row ${contentStart}: "${String(first).slice(0, 60)}" … row ${contentEnd}: "${String(last).slice(0, 60)}"`);
+    contentStart = Number(await ask('  Start row', String(contentStart)));
+    contentEnd   = Number(await ask('  End row', String(contentEnd)));
+    rl.close();
+  }
+
   if (!gameName) fail('Could not read the game name from cell A2 — pass --name "Game Name".');
+  if (!Number.isInteger(contentStart) || !Number.isInteger(contentEnd) ||
+      contentStart < 1 || contentEnd < contentStart || contentEnd > rows.length) {
+    fail(`Invalid row range ${contentStart}:${contentEnd} (sheet has ${rows.length} rows).`);
+  }
+
+  markEmptyLanguages(langMap, rows, contentStart, contentEnd);
 
   const updated: string[] = [];
   const warned: string[] = [];
@@ -167,9 +207,9 @@ async function main(): Promise<void> {
 
   if (active.length === 0) fail('No requested language has content in the sheet — nothing to generate.');
 
-  const block = rows.slice(startRow - 1, endRow);
+  const block = rows.slice(contentStart - 1, contentEnd);
   const sections = parseSections(block, active);
-  console.log(`Game: ${gameName} — ${sections.length} sections, rows ${startRow}–${endRow}`);
+  console.log(`Game: ${gameName} — ${sections.length} sections, rows ${contentStart}–${contentEnd}`);
   console.log(`Mode: ${args.values ? 'real values' : '{{...}} placeholders'}`);
 
   for (const lang of active) {

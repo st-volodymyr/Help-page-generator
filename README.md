@@ -22,6 +22,13 @@ from the game's `package.json` → `l10ntool.langs`, plus `en` (always).
 | `--langs a,b,c` | Override the language list entirely |
 | `--values` | Write real values instead of `{{...}}` placeholders (same as unchecking "templatize" in the web tool) |
 | `--name "Game"` | Override the auto-detected game name (cell A2) |
+| `--rows 6:13` | Override the detected content row range (start:end, 1-based) |
+| `-y`, `--yes` | Skip the interactive confirmation of game name / rows |
+
+Before generating, the CLI shows the detected game name and content row range
+(with a peek at the first/last row text) and asks to confirm — press Enter to
+accept or type a correction. In CI (no terminal) or with `--yes` the detected
+values are used as-is.
 
 The run ends with a summary: updated files, warnings (lang in `langs` but
 missing/empty in the sheet — existing file untouched), skipped sheet columns
