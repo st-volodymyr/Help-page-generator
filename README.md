@@ -21,7 +21,7 @@ If `<source>` is omitted, the CLI asks for it interactively.
 | `--out <dir>` | Output folder (default `./help`, must exist) |
 | `--game <dir>` | Game repo root with `package.json` (default: current dir) |
 | `--langs a,b,c` | Override the language list entirely |
-| `--values` | Write real values instead of `{{...}}` placeholders (same as unchecking "templatize" in the web tool) |
+| `--values` | Write real values instead of `{{...}}` placeholders (same as unchecking "templatize" in the web tool); also asked interactively — the flag just sets the default |
 | `--name "Game"` | Override the auto-detected game name (cell A2) |
 | `--rows 6:13` | Override the detected content row range (start:end, 1-based) |
 | `-y`, `--yes` | Skip the interactive confirmation of game name / rows |

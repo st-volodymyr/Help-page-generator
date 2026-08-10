@@ -95,6 +95,15 @@ try {
     assert.doesNotMatch(r11.out, /Google Sheets URL or/);
   });
 
+  // Values-mode prompt: answering "v" switches to real values.
+  const r13 = run([fixture, '--out', tmp, '--langs', 'el'], { input: '\n\n\nv\n' });
+  test('values-mode prompt switches to real values', () => {
+    assert.equal(r13.code, 0, r13.out);
+    const html = readFileSync(join(tmp, 'help_el.html'), 'utf8');
+    assert.match(html, /96\.22%/);
+    assert.doesNotMatch(html, /\{\{/);
+  });
+
   // Piped stdin (IDE run window): answers override the detected values.
   const r7 = run([fixture, '--out', tmp, '--langs', 'es'], { input: 'Renamed Game\n\n\n' });
   test('piped stdin answers override game name', () => {

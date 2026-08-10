@@ -29,7 +29,8 @@ Options:
   --game <dir>        Game repo root containing package.json (default: current dir)
   --langs a,b,c       Override the language list (skips package.json lookup)
   --values            Write real values instead of {{...}} placeholders
-                      (same as unchecking "templatize" in the web tool)
+                      (same as unchecking "templatize" in the web tool);
+                      also asked interactively, this sets the default
   --name "Game Name"  Override the auto-detected game name (sheet cell A2)
   --rows 6:13         Override the detected content rows (start:end, 1-based)
   -y, --yes           Accept detected game name / rows without asking
@@ -92,20 +93,31 @@ function parseArgs(argv: string[]): Args {
  */
 function makePrompter() {
   let rl: ReturnType<typeof createInterface> | null = null;
-  let open = false;
+  let closed = false;
+  // Piped stdin (IDE run windows, tests) delivers all lines at once; lines
+  // emitted between ask() calls must be buffered, not dropped — rl.question()
+  // alone loses them.
+  const buffered: string[] = [];
+  let waiting: ((line: string | null) => void) | null = null;
   return {
     async ask(label: string, current = ''): Promise<string> {
       if (!rl) {
         rl = createInterface({ input: process.stdin, output: process.stdout });
-        open = true;
-        rl.on('close', () => { open = false; });
+        rl.on('line', line => {
+          if (waiting) { const w = waiting; waiting = null; w(line); }
+          else buffered.push(line);
+        });
+        rl.on('close', () => {
+          closed = true;
+          if (waiting) { const w = waiting; waiting = null; w(null); }
+        });
       }
-      if (!open) return current;
-      const answer = await Promise.race([
-        rl.question(`${label}${current ? ` [${current}]` : ''}: `),
-        new Promise<string>(res => rl!.once('close', () => res(''))),
-      ]);
-      return answer.trim().replace(/^["']|["']$/g, '') || current;
+      process.stdout.write(`${label}${current ? ` [${current}]` : ''}: `);
+      let answer: string | null;
+      if (buffered.length) { answer = buffered.shift()!; process.stdout.write(`${answer}\n`); }
+      else if (closed) { answer = null; process.stdout.write('\n'); }
+      else answer = await new Promise<string | null>(res => { waiting = res; });
+      return (answer ?? '').trim().replace(/^["']|["']$/g, '') || current;
     },
     close(): void { rl?.close(); },
   };
@@ -211,6 +223,8 @@ async function main(): Promise<void> {
     console.log(`  Row ${contentStart}: "${String(first).slice(0, 60)}" … row ${contentEnd}: "${String(last).slice(0, 60)}"`);
     contentStart = Number(await prompt.ask('  Start row', String(contentStart)));
     contentEnd   = Number(await prompt.ask('  End row', String(contentEnd)));
+    const mode = await prompt.ask('  Values mode — {{...}} placeholders or real values (p/v)', args.values ? 'v' : 'p');
+    args.values = /^v/i.test(mode);
   }
   prompt.close();
 
