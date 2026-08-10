@@ -70,6 +70,19 @@ try {
     assert.doesNotMatch(html, /\{\{/);
   });
 
+  // Piped stdin (IDE run window): answers override the detected values.
+  const r7 = run([fixture, '--out', tmp, '--langs', 'es'], { input: 'Renamed Game\n\n\n' });
+  test('piped stdin answers override game name', () => {
+    assert.equal(r7.code, 0, r7.out);
+    assert.match(readFileSync(join(tmp, 'help_es.html'), 'utf8'), /<h1>Renamed Game<\/h1>/);
+  });
+  // Empty stdin (CI): EOF auto-accepts all detected defaults.
+  const r8 = run([fixture, '--out', tmp, '--langs', 'es'], { input: '' });
+  test('EOF on stdin auto-accepts defaults', () => {
+    assert.equal(r8.code, 0, r8.out);
+    assert.match(r8.out, /rows 6–13/);
+  });
+
   const r5 = run([fixture, '--out', tmp, '--langs', 'es', '--rows', '6:13']);
   test('--rows override produces the same content block', () => {
     assert.equal(r5.code, 0, r5.out);

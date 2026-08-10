@@ -27,8 +27,9 @@ from the game's `package.json` → `l10ntool.langs`, plus `en` (always).
 
 Before generating, the CLI shows the detected game name and content row range
 (with a peek at the first/last row text) and asks to confirm — press Enter to
-accept or type a correction. In CI (no terminal) or with `--yes` the detected
-values are used as-is.
+accept or type a correction. This works in terminals **and IDE run windows**
+(stdin pipe). With `--yes`, or when stdin is closed (CI), the detected values
+are used as-is.
 
 The run ends with a summary: updated files, warnings (lang in `langs` but
 missing/empty in the sheet — existing file untouched), skipped sheet columns

@@ -35,8 +35,9 @@ Options:
   -h, --help          Show this help
 
 Before generating, the CLI shows the detected game name and row range and
-asks to confirm — press Enter to accept, or type a correction. Prompts are
-skipped with --yes or when there is no interactive terminal (CI).
+asks to confirm — press Enter to accept, or type a correction. Works in
+terminals and IDE run windows alike; with --yes, or when stdin is closed
+(CI), the detected values are accepted automatically.
 `;
 
 interface Args {
@@ -166,11 +167,21 @@ async function main(): Promise<void> {
   let contentEnd = args.rows?.end ?? endRow!;
 
   // Detection is often wrong on non-standard sheets (junk in A2, shifted
-  // blocks) — confirm interactively unless --yes or no TTY (CI).
-  if (!args.yes && process.stdin.isTTY) {
+  // blocks) — confirm interactively unless --yes. stdin may be a pipe rather
+  // than a TTY (IDE run windows), so don't gate on isTTY; instead treat EOF
+  // on stdin (true CI) as "accept all defaults".
+  if (!args.yes) {
     const rl = createInterface({ input: process.stdin, output: process.stdout });
-    const ask = async (label: string, current: string): Promise<string> =>
-      (await rl.question(`${label} [${current}]: `)).trim() || current;
+    let stdinOpen = true;
+    rl.on('close', () => { stdinOpen = false; });
+    const ask = async (label: string, current: string): Promise<string> => {
+      if (!stdinOpen) return current;
+      const answer = await Promise.race([
+        rl.question(`${label} [${current}]: `),
+        new Promise<string>(res => rl.once('close', () => res(''))),
+      ]);
+      return answer.trim() || current;
+    };
 
     console.log('Detected settings — press Enter to accept, or type a correction:');
     gameName = await ask('  Game name', gameName);
