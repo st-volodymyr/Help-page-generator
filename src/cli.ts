@@ -184,7 +184,15 @@ async function main(): Promise<void> {
   if (!args.source) {
     if (args.yes) fail(`Missing <source>.\n${USAGE}`);
     args.source = await prompt.ask('Google Sheets URL or .xlsx/.csv path');
-    if (!args.source) fail(`Missing <source>.\n${USAGE}`);
+    if (!args.source) {
+      fail(
+        `Missing <source> — no answer received on stdin.\n` +
+        `  If you launched this from an IDE task / npm-scripts run button, that\n` +
+        `  terminal cannot forward keyboard input. Either run it in a regular\n` +
+        `  integrated terminal, or pass the URL as an argument (in quotes):\n` +
+        `    npm run help:gen -- "https://docs.google.com/spreadsheets/d/..."\n${USAGE}`,
+      );
+    }
   }
 
   const outDir = resolve(args.out ?? join(args.game, 'help'));
