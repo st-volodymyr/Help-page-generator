@@ -21,7 +21,8 @@ const USAGE = `
 Usage: npx github:st-volodymyr/Help-page-generator <source> [options]
 
   <source>            Google Sheets URL (shared "Anyone with link"),
-                      or a path to an .xlsx / .csv export
+                      or a path to an .xlsx / .csv export.
+                      If omitted, the CLI asks for it.
 
 Options:
   --out <dir>         Output folder (default: ./help). Must already exist.
@@ -81,8 +82,33 @@ function parseArgs(argv: string[]): Args {
     else if (!a.source) a.source = arg;
     else fail(`Unexpected argument: ${arg}\n${USAGE}`);
   }
-  if (!a.source) fail(`Missing <source>.\n${USAGE}`);
   return a;
+}
+
+/**
+ * Lazy shared stdin prompter. stdin may be a pipe rather than a TTY (IDE run
+ * windows) — still readable. EOF (true CI) makes every ask() return its
+ * default immediately.
+ */
+function makePrompter() {
+  let rl: ReturnType<typeof createInterface> | null = null;
+  let open = false;
+  return {
+    async ask(label: string, current = ''): Promise<string> {
+      if (!rl) {
+        rl = createInterface({ input: process.stdin, output: process.stdout });
+        open = true;
+        rl.on('close', () => { open = false; });
+      }
+      if (!open) return current;
+      const answer = await Promise.race([
+        rl.question(`${label}${current ? ` [${current}]` : ''}: `),
+        new Promise<string>(res => rl!.once('close', () => res(''))),
+      ]);
+      return answer.trim().replace(/^["']|["']$/g, '') || current;
+    },
+    close(): void { rl?.close(); },
+  };
 }
 
 /** Extract sheet id + gid from any Google Sheets URL form. */
@@ -144,6 +170,13 @@ function wantedLangs(args: Args): string[] {
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
+  const prompt = makePrompter();
+
+  if (!args.source) {
+    if (args.yes) fail(`Missing <source>.\n${USAGE}`);
+    args.source = await prompt.ask('Google Sheets URL or .xlsx/.csv path');
+    if (!args.source) fail(`Missing <source>.\n${USAGE}`);
+  }
 
   const outDir = resolve(args.out);
   if (!existsSync(outDir) || !statSync(outDir).isDirectory()) {
@@ -171,27 +204,15 @@ async function main(): Promise<void> {
   // than a TTY (IDE run windows), so don't gate on isTTY; instead treat EOF
   // on stdin (true CI) as "accept all defaults".
   if (!args.yes) {
-    const rl = createInterface({ input: process.stdin, output: process.stdout });
-    let stdinOpen = true;
-    rl.on('close', () => { stdinOpen = false; });
-    const ask = async (label: string, current: string): Promise<string> => {
-      if (!stdinOpen) return current;
-      const answer = await Promise.race([
-        rl.question(`${label} [${current}]: `),
-        new Promise<string>(res => rl.once('close', () => res(''))),
-      ]);
-      return answer.trim() || current;
-    };
-
     console.log('Detected settings — press Enter to accept, or type a correction:');
-    gameName = await ask('  Game name', gameName);
+    gameName = await prompt.ask('  Game name', gameName);
     const first = rows[contentStart - 1]?.find(c => String(c).trim()) ?? '';
     const last  = rows[contentEnd - 1]?.find(c => String(c).trim()) ?? '';
     console.log(`  Row ${contentStart}: "${String(first).slice(0, 60)}" … row ${contentEnd}: "${String(last).slice(0, 60)}"`);
-    contentStart = Number(await ask('  Start row', String(contentStart)));
-    contentEnd   = Number(await ask('  End row', String(contentEnd)));
-    rl.close();
+    contentStart = Number(await prompt.ask('  Start row', String(contentStart)));
+    contentEnd   = Number(await prompt.ask('  End row', String(contentEnd)));
   }
+  prompt.close();
 
   if (!gameName) fail('Could not read the game name from cell A2 — pass --name "Game Name".');
   if (!Number.isInteger(contentStart) || !Number.isInteger(contentEnd) ||

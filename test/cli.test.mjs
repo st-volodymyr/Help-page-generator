@@ -70,6 +70,25 @@ try {
     assert.doesNotMatch(html, /\{\{/);
   });
 
+  // No <source> argument: the CLI asks for it on stdin.
+  const r9 = run(['--out', tmp, '--langs', 'es'], { input: `${fixture}\n\n\n\n` });
+  test('missing source is prompted for on stdin', () => {
+    assert.equal(r9.code, 0, r9.out);
+    assert.match(r9.out, /Google Sheets URL or \.xlsx\/\.csv path/);
+    assert.match(r9.out, /Updated \(2\): en, es/);
+  });
+  const r10 = run(['--out', tmp], { input: '' });
+  test('missing source + EOF fails with usage', () => {
+    assert.notEqual(r10.code, 0);
+    assert.match(r10.out, /Missing <source>/);
+  });
+  const r11 = run(['--out', tmp, '--yes'], { input: '' });
+  test('missing source + --yes fails without prompting', () => {
+    assert.notEqual(r11.code, 0);
+    assert.match(r11.out, /Missing <source>/);
+    assert.doesNotMatch(r11.out, /Google Sheets URL or/);
+  });
+
   // Piped stdin (IDE run window): answers override the detected values.
   const r7 = run([fixture, '--out', tmp, '--langs', 'es'], { input: 'Renamed Game\n\n\n' });
   test('piped stdin answers override game name', () => {

@@ -14,6 +14,7 @@ npx github:st-volodymyr/Help-page-generator <sheet-url | file.xlsx | file.csv> [
 
 Files are written straight into the game's `help/` folder. Languages are taken
 from the game's `package.json` → `l10ntool.langs`, plus `en` (always).
+If `<source>` is omitted, the CLI asks for it interactively.
 
 | Option | Meaning |
 |---|---|
