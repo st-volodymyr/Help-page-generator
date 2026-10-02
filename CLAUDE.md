@@ -74,6 +74,8 @@ Input (Google Sheets URL or .xlsx upload)
   → downloadSingle() / downloadZip() → file export
 ```
 
+**Output format (PZ / Crown):** segmented toggle in Advanced settings (`input[name=format]`, remembered in localStorage `helpgen.format`). Crown → `buildHtml(..., 'crown')`, only `*-SOCIAL` lang chips pre-selected, no `maxWinnings` preview input. Same as CLI `--crown`.
+
 **Preview panel:**
 - `.app-shell` uses CSS grid: `grid-template-columns: 1fr 0px` → `440px 1fr` when `.preview-open`
 - Transition animates the split (Chrome 107+, Firefox 119+)

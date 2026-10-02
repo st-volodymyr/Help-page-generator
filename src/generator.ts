@@ -1,6 +1,7 @@
 import { state } from './state.js';
 import { parseSections, extractDefaults } from './parser.js';
 import { buildHtml, slugify } from './builder.js';
+import type { HelpFormat } from './builder.js';
 import type { LangEntry, ClogFn } from './types.js';
 
 const PCT_RE = /\d+[.,]\d+\s*%|\d+\s*%/;
@@ -46,6 +47,7 @@ export function generate(
   activeLangs: LangEntry[],
   clog: ClogFn,
   templatize = true,
+  format: HelpFormat = 'pz',
 ): { sections: ReturnType<typeof parseSections> } {
   const block    = state.sheetData!.slice(startRow - 1, endRow);
   const sections = parseSections(block, activeLangs);
@@ -53,12 +55,14 @@ export function generate(
 
   state.generated = {};
   activeLangs.forEach(lang => {
-    state.generated[lang.code] = buildHtml(gameName, sections, lang.col, templatize);
+    state.generated[lang.code] = buildHtml(gameName, sections, lang.col, templatize, format);
     clog('success', `Built  help_${lang.code}.html`);
   });
 
   const enLang = activeLangs.find(l => l.code === 'en') ?? activeLangs[0];
   state.params = templatize ? extractParamDefaults(sections, enLang.col, block) : {};
+  // Crown keeps the real max-win value — there is no {{maxWinnings}} to fill in.
+  if (format === 'crown') delete state.params['maxWinnings'];
 
   return { sections };
 }

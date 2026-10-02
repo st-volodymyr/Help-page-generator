@@ -619,6 +619,28 @@ input::placeholder { color: var(--border2); }
   color: var(--border2);
 }
 
+/* ── Segmented control (output format) ── */
+.seg {
+  display: inline-flex;
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.seg-opt { position: relative; cursor: pointer; user-select: none; }
+.seg-opt input { position: absolute; opacity: 0; pointer-events: none; }
+.seg-opt span {
+  display: block;
+  padding: 6px 16px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-dim);
+  transition: background 0.15s, color 0.15s;
+}
+.seg-opt + .seg-opt span { border-left: 1px solid var(--border2); }
+.seg-opt:hover span { color: var(--text); }
+.seg-opt input:checked + span { background: var(--blue); color: #fff; }
+.seg-opt input:focus-visible + span { outline: 2px solid var(--blue); outline-offset: -2px; }
+
 /* ── Generate button ── */
 .btn-generate {
   width: 100%;

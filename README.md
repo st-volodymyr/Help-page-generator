@@ -61,7 +61,7 @@ inference bug). Note for PowerShell users passing extra *flags* through
 
 1. Open the tool URL above
 2. Paste your Google Sheet link **or** upload the `.xlsx` export — game name, row range, and language row are auto-detected
-3. Review the detected languages (empty columns are flagged automatically)
+3. Review the detected languages (empty columns are flagged automatically). For Crown games switch **Advanced settings → Output format** to **Crown** (only `*-SOCIAL` languages get selected)
 4. Click **Generate & Preview** to see the result in the live preview panel
 5. Use **↓ Download current language (.html)** or **↓ Download all languages (ZIP)** to export
 

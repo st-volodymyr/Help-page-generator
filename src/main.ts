@@ -5,6 +5,7 @@ import { sheetToCsvUrl } from './sheetUrl.js';
 import { generate, downloadZip, downloadSingle } from './generator.js';
 import { openPreview, closePreview, getActiveLang } from './preview.js';
 import type { LogType } from './types.js';
+import type { HelpFormat } from './builder.js';
 
 // ── DOM refs ──────────────────────────────────────────────────
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -15,6 +16,7 @@ const endRowEl     = $<HTMLInputElement>('endRow');
 const headerRowEl  = $<HTMLInputElement>('headerRow');
 const templatizeEl = $<HTMLInputElement>('templatize');
 const generateBtn  = $<HTMLButtonElement>('generateBtn');
+const formatEls    = document.querySelectorAll<HTMLInputElement>('input[name="format"]');
 const fetchStatus  = $('fetchStatus');
 const sheetUrlEl   = $<HTMLInputElement>('sheetUrl');
 const fetchBtn     = $<HTMLButtonElement>('fetchBtn');
@@ -221,8 +223,40 @@ function redetectLanguages(): void {
     markEmptyLanguages(state.langMap, state.sheetData!, startRow, endRow);
   }
 
+  applyFormatLangDefaults();
   renderLangChips();
 }
+
+// ── Output format (PZ / Crown) ────────────────────────────────
+const FORMAT_KEY = 'helpgen.format';
+const FORMAT_HINT: Record<HelpFormat, string> = {
+  pz:    '// PlayZido game',
+  crown: '// Crown game, *-SOCIAL langs',
+};
+
+function getFormat(): HelpFormat {
+  return [...formatEls].find(el => el.checked)?.value === 'crown' ? 'crown' : 'pz';
+}
+
+/** Crown games ship only the *-SOCIAL langs; PZ takes every non-empty column. */
+function applyFormatLangDefaults(): void {
+  const crown = getFormat() === 'crown';
+  state.langMap.forEach(l => { l.on = !l.empty && (!crown || l.code.endsWith('-SOCIAL')); });
+}
+
+function onFormatChange(): void {
+  const format = getFormat();
+  $('formatHint').textContent = FORMAT_HINT[format];
+  try { localStorage.setItem(FORMAT_KEY, format); } catch { /* storage blocked */ }
+  if (state.langMap.length) { applyFormatLangDefaults(); renderLangChips(); }
+}
+
+try {
+  const saved = localStorage.getItem(FORMAT_KEY);
+  formatEls.forEach(el => { el.checked = el.value === (saved === 'crown' ? 'crown' : 'pz'); });
+} catch { /* storage blocked — keep the default */ }
+formatEls.forEach(el => el.addEventListener('change', onFormatChange));
+$('formatHint').textContent = FORMAT_HINT[getFormat()];
 
 function renderLangChips(): void {
   const el = $('langGrid');
@@ -268,6 +302,7 @@ generateBtn.addEventListener('click', async () => {
     const endRow      = parseInt(endRowEl.value, 10);
     const activeLangs = state.langMap.filter(l => l.on);
     const templatize  = templatizeEl.checked;
+    const format      = getFormat();
 
     if (!activeLangs.length) { clog('error', 'No languages selected'); return; }
 
@@ -275,8 +310,9 @@ generateBtn.addEventListener('click', async () => {
     clog('info', `rows      = ${startRow}–${endRow}`);
     clog('info', `langs     = ${activeLangs.map(l => l.code).join(', ')}`);
     clog('info', `templatize = ${templatize ? 'on ({{...}} placeholders)' : 'off (real values)'}`);
+    clog('info', `format    = ${format === 'crown' ? 'Crown' : 'PZ'}`);
 
-    const { sections } = generate(gameName, startRow, endRow, activeLangs, clog, templatize);
+    const { sections } = generate(gameName, startRow, endRow, activeLangs, clog, templatize, format);
 
     $('successDetail').textContent =
       `${activeLangs.length} files · ${sections.length} sections · "${gameName}"`;
