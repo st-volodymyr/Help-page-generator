@@ -24,6 +24,13 @@ game's `package.json` → `l10ntool.langs` plus `en` always; `--values` mirrors
 the web "templatize" checkbox (off = real values). `bin/` is gitignored —
 never commit it.
 
+`--crown` switches `buildHtml` to the Crown format (Crown games run
+`help:gen … --crown`): the `<style>` block from `src/crownStyle.ts` (embedded
+Quicksand base64 fonts, copied from `cronwCoins/tarzanmultirush/help`),
+sections nested in `.scroll-container`, max win kept as the real value (no
+`{{maxWinnings}}` span), and no implicit `en` — only `l10ntool.langs`
+(`en-SOCIAL`, `de-SOCIAL`, `fr-SOCIAL`, `es-SOCIAL`). PZ output is unchanged.
+
 ## Deployment
 
 - GitHub Pages serves from the `docs/` folder on the `main` branch (Settings → Pages → Deploy from branch → main / docs)
@@ -47,7 +54,8 @@ Vite + TypeScript project. `index.html` at root, source modules in `src/`, produ
 | `src/config.ts` | `HEADER_TO_CODE` map (header text → lang code), two formats supported |
 | `src/state.ts` | Shared mutable state: `sheetData`, `langMap`, `generated`, `params` |
 | `src/parser.ts` | `parseCSV`, `detectLanguages`, `detectHeaderRow`, `detectRowRange`, `markEmptyLanguages`, `parseSections`, `extractDefaults` |
-| `src/builder.ts` | `buildHtml`, `buildSection`, `processLine`, `esc`, `slugify` |
+| `src/builder.ts` | `buildHtml` (`pz` / `crown` format), `buildSection`, `processLine`, `esc`, `slugify` |
+| `src/crownStyle.ts` | `CROWN_STYLE` — Crown `<style>` block with embedded fonts; regenerate from a Crown reference help file, never hand-edit the base64 |
 | `src/generator.ts` | `generate()`, `extractParamDefaults()`, `downloadZip()`, `downloadSingle()` |
 | `src/preview.ts` | Preview panel open/close, `buildPreviewDoc`, dynamic param inputs, live substitution |
 | `src/main.ts` | DOM wiring, event listeners, UI state (steps, console, lang chips) |
@@ -83,7 +91,7 @@ Input (Google Sheets URL or .xlsx upload)
 
 ## Supported Languages
 
-`en`, `en-us-ct`, `el`, `es`, `fr-ca`, `fr`, `it`, `nl`, `pt-br`, `pt-pt`, `sv`
+`en`, `en-us-ct`, `en-SOCIAL`, `de-SOCIAL`, `fr-SOCIAL`, `es-SOCIAL`, `el`, `es`, `fr-ca`, `fr`, `it`, `nl`, `pt-br`, `pt-pt`, `sv`
 
 Two header formats in `HEADER_TO_CODE` (`src/config.ts`):
 - Format A: `"English (EN)"`, `"Spanish (ES)"` …
@@ -95,7 +103,7 @@ To add a language, add both format variants to `HEADER_TO_CODE`.
 
 - **Cell A2**: Game name (auto-filled into the UI)
 - **Language row**: Row with ≥2 known language headers — auto-detected by `detectHeaderRow`
-- **Content block**: Starts at first row containing "How to Play", ends at the "©/copyright" row (inclusive) — auto-detected by `detectRowRange`
+- **Content block**: Starts at first row containing "How to Play" (or at an "Introduction" block directly above it, if present), ends at the "©/copyright" row (inclusive) — auto-detected by `detectRowRange`
 - Blank rows in content block = section breaks; first non-blank row of each block = section title (from col 0 / enTitle)
 - Sheet must be shared as "Anyone with the link can view" for URL-based loading
 

@@ -1,4 +1,8 @@
 import type { Section } from './types.js';
+import { CROWN_STYLE } from './crownStyle.js';
+
+/** 'pz' — PlayZido help fragment; 'crown' — Crown fragment (embedded fonts, scroll container). */
+export type HelpFormat = 'pz' | 'crown';
 
 export function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -36,7 +40,11 @@ function isMainRtpSection(slug: string): boolean {
   return slug.includes('return');
 }
 
-export function processLine(line: string, rtpParamName = 'game_rtp', templatize = true): string {
+/**
+ * `maxWin = false` keeps the real max-win amount (Crown has no {{maxWinnings}}
+ * yet) — only the placeholder brackets ("[5,000]x") are dropped.
+ */
+export function processLine(line: string, rtpParamName = 'game_rtp', templatize = true, maxWin = true): string {
   if (!line) return '';
   if (!templatize) return esc(line);
   if (PCT_RE.test(line))
@@ -44,6 +52,7 @@ export function processLine(line: string, rtpParamName = 'game_rtp', templatize 
       .replace(/(\d+[.,]\d+)(\s*%)/, `{{${rtpParamName}}}$2`)
       .replace(/(\d+)(\s*%)/, `{{${rtpParamName}}}$2`)
     );
+  if (!maxWin) return esc(line.replace(MONEY_RE, m => m.replace(/^\[\s*|\s*\]$/g, '')));
   if (MONEY_RE.test(line) && !isMultiplierList(line) && !line.includes('{{maxWinnings}}'))
     return [
       `<span class="not-configured_{{maxWinnings}}">`,
@@ -53,7 +62,9 @@ export function processLine(line: string, rtpParamName = 'game_rtp', templatize 
   return esc(line);
 }
 
-function buildSection(sec: Section, col: number, templatize: boolean): string {
+/** Crown nests sections in .scroll-container, so every non-empty line gets 4 more spaces. */
+function buildSection(sec: Section, col: number, templatize: boolean, format: HelpFormat): string {
+  const indent = format === 'crown' ? '    ' : '';
   const id    = slugify(sec.enTitle) || 'section';
   const title = sec.titleByCol[col] ?? '';
   const lines = sec.contentByCol[col] ?? [];
@@ -68,7 +79,7 @@ function buildSection(sec: Section, col: number, templatize: boolean): string {
       rtpCount++;
       paramName = rtpCount === 1 ? `${id}_rtp` : `${id}_rtp_${rtpCount}`;
     }
-    return ind + processLine(l, paramName, templatize) + (i < lines.length - 1 ? '\n' + ind + '<br>' : '');
+    return ind + processLine(l, paramName, templatize, format !== 'crown') + (i < lines.length - 1 ? '\n' + ind + '<br>' : '');
   });
 
   return [
@@ -79,10 +90,32 @@ function buildSection(sec: Section, col: number, templatize: boolean): string {
     processedLines.join('\n'),
     '        </p>',
     '    </div>',
-  ].join('\n');
+  ].join('\n').replace(/^(?=.)/gm, indent);
 }
 
-export function buildHtml(gameName: string, sections: Section[], col: number, templatize = true): string {
+export function buildHtml(
+  gameName: string, sections: Section[], col: number, templatize = true, format: HelpFormat = 'pz',
+): string {
+  const name = [
+    '    <div id="help__name" style="text-align: center;">',
+    `        <h1>${esc(gameName)}</h1>`,
+    '    </div>',
+  ];
+  if (format === 'crown') {
+    // Same shell as the Crown reference games (tarzanmultirush / tarzanxpotz).
+    return [
+      '<div id="content-help">',
+      CROWN_STYLE,
+      '',
+      ...name,
+      '',
+      '    <div class="scroll-container">',
+      '',
+      sections.map(s => buildSection(s, col, templatize, format)).join('\n\n'),
+      '    </div>',
+      '</div>',
+    ].join('\n');
+  }
   return [
     '<div id="content-help">',
     '    <style>',
@@ -91,11 +124,9 @@ export function buildHtml(gameName: string, sections: Section[], col: number, te
     '        .visible_false, .not-configured_, .bfs_true { display: none; }',
     '    </style>',
     '',
-    '    <div id="help__name" style="text-align: center;">',
-    `        <h1>${esc(gameName)}</h1>`,
-    '    </div>',
+    ...name,
     '',
-    sections.map(s => buildSection(s, col, templatize)).join('\n\n'),
+    sections.map(s => buildSection(s, col, templatize, format)).join('\n\n'),
     '</div>',
   ].join('\n');
 }

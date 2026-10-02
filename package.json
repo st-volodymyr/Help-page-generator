@@ -1,6 +1,6 @@
 {
   "name": "help-page-generator",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "type": "module",
   "bin": {
     "help-page-generator": "bin/cli.cjs"

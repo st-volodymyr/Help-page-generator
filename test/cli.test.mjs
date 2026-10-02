@@ -207,6 +207,48 @@ try {
     assert.match(readFileSync(join(tmp, 'help_sv.html'), 'utf8'), /Snurra hjulen/);
   });
 
+  // --crown: Crown shell (embedded fonts + scroll container), no implicit en.
+  const crownDir = join(tmp, 'crown');
+  mkdirSync(crownDir);
+  const rCrown = run([fixture, '--out', crownDir, '--langs', 'es', '--crown', '--yes']);
+  test('--crown writes only the listed langs (no en)', () => {
+    assert.equal(rCrown.code, 0, rCrown.out);
+    assert.ok(existsSync(join(crownDir, 'help_es.html')));
+    assert.ok(!existsSync(join(crownDir, 'help_en.html')), 'help_en.html should not exist');
+  });
+  test('--crown uses the Crown shell', () => {
+    const html = readFileSync(join(crownDir, 'help_es.html'), 'utf8');
+    assert.match(html, /font-family: "Quicksand";\s+src: url\(data:font\/opentype/);
+    assert.match(html, /<div class="scroll-container">\n\n        <div id="help__/);
+    assert.match(html, /    <\/div>\n<\/div>$/);
+  });
+
+  test('--crown keeps the real max win, RTP stays a placeholder', () => {
+    const html = readFileSync(join(crownDir, 'help_es.html'), 'utf8');
+    assert.match(html, /La ganancia máxima es 3\.000x\./);
+    assert.doesNotMatch(html, /maxWinnings/);
+    assert.match(html, /\{\{game_rtp\}\}%/);
+  });
+
+  // An "Introduction" block right above "How to Play" starts the content block.
+  const introCsv = join(tmp, 'intro.csv');
+  writeFileSync(introCsv, readFileSync(fixture, 'utf8').replace(
+    /\nHow to Play,/,
+    '\nIntroduction,Introduction,Introduction,Introducción,Introduction,Εισαγωγή\n' +
+    'Licensed game.,Licensed game.,Licensed game.,Juego con licencia.,Jeu sous licence.,Παιχνίδι.\n' +
+    ',,,,,\nHow to Play,'));
+  const introDir = join(tmp, 'intro');
+  mkdirSync(introDir);
+  const rIntro = run([introCsv, '--out', introDir, '--langs', 'es', '--yes']);
+  test('Introduction above How to Play is included', () => {
+    assert.equal(rIntro.code, 0, rIntro.out);
+    assert.match(rIntro.out, /rows 6–/);
+    const html = readFileSync(join(introDir, 'help_es.html'), 'utf8');
+    assert.match(html, /<div id="help__introduction">\n        <h2>Introducción:<\/h2>/);
+  });
+  test('without Introduction the block still starts at How to Play', () =>
+    assert.match(r1.out, /rows 6–/));
+
   const r3 = run([fixture, '--out', join(tmp, 'nope')]);
   test('missing --out folder fails with a hint', () => {
     assert.notEqual(r3.code, 0);

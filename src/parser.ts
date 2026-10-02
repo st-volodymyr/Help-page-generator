@@ -82,9 +82,27 @@ export function detectHeaderRow(rows: string[][]): number | null {
   return null;
 }
 
+const isBlankRow = (row: string[] | undefined): boolean =>
+  !row || row.every(c => String(c ?? '').trim() === '');
+
+/**
+ * Not every game has an "Introduction" section, and where it exists it sits
+ * right above "How to Play". Returns the 0-based index of its title row when
+ * the block directly preceding `howToPlay` (blank rows skipped) is titled
+ * "Introduction", otherwise `howToPlay` unchanged.
+ */
+function includeIntroduction(rows: string[][], howToPlay: number): number {
+  let i = howToPlay - 1;
+  while (i >= 0 && isBlankRow(rows[i])) i--;
+  if (i < 0 || i === howToPlay - 1) return howToPlay;   // no preceding block / no separator
+  while (i > 0 && !isBlankRow(rows[i - 1])) i--;
+  return /^introduction\s*:?$/i.test(String(rows[i][0] ?? '').trim()) ? i : howToPlay;
+}
+
 /**
  * Scan the sheet for the content block boundaries:
- *   startRow — first row whose ANY cell contains "how to play" (case-insensitive)
+ *   startRow — first row whose ANY cell contains "how to play" (case-insensitive),
+ *              or the "Introduction" block right above it when there is one
  *   endRow   — last row to include, set to the "© / copyright" line (inclusive)
  * Returns 1-based row numbers matching what the UI fields expect.
  * Returns null for either value if not found.
@@ -96,7 +114,7 @@ export function detectRowRange(rows: string[][]): { startRow: number | null; end
   for (let i = 0; i < rows.length; i++) {
     const text = rows[i].join(' ').toLowerCase();
     if (startRow === null && text.includes('how to play')) {
-      startRow = i + 1; // 1-based; this row is the first included
+      startRow = includeIntroduction(rows, i) + 1; // 1-based; this row is the first included
     }
     if (startRow !== null && (text.includes('©') || text.includes('copyright'))) {
       // include the copyright row itself: 0-based index i → 1-based row i+1

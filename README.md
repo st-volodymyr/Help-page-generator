@@ -22,6 +22,7 @@ If `<source>` is omitted, the CLI asks for it interactively.
 | `--game <dir>` | Game repo root with `package.json` (default: current dir) |
 | `--langs a,b,c` | Override the language list entirely |
 | `--values` | Write real values instead of `{{...}}` placeholders (same as unchecking "templatize" in the web tool); also asked interactively — the flag just sets the default |
+| `--crown` | Crown format — embedded Quicksand fonts, Crown styles and `.scroll-container` (same shell as `tarzanmultirush`). Max win stays a real value (no `{{maxWinnings}}`); RTP placeholders as usual. Langs come strictly from `l10ntool.langs`, `en` is **not** added |
 | `--name "Game"` | Override the auto-detected game name (cell A2) |
 | `--rows 6:13` | Override the detected content row range (start:end, 1-based) |
 | `-y`, `--yes` | Skip the interactive confirmation of game name / rows |
@@ -43,6 +44,12 @@ Optional per-game convenience script in the game's `package.json`:
 ```
 
 then: `npm run help:gen -- "<sheet-url>"` (quote the URL — it contains `&`/`#`).
+
+Crown games add the flag to the script itself:
+
+```json
+"scripts": { "help:gen": "npm exec --yes --package=github:st-volodymyr/Help-page-generator -- help-page-generator --crown" }
+```
 
 The explicit `npm exec … -- help-page-generator` form is deliberate: plain
 `npx github:…` silently runs nothing on some npm versions (default-bin

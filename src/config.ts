@@ -18,6 +18,10 @@ export const HEADER_TO_CODE: Record<string, string> = {
   'german-social (de-sc)':        'de-SOCIAL',
   'german - social (de-sc)':      'de-SOCIAL',
   'german social (de-sc)':        'de-SOCIAL',
+  'french social (fr-sc)':        'fr-SOCIAL',
+  'french - social (fr-sc)':      'fr-SOCIAL',
+  'spanish latam social (es-sc)': 'es-SOCIAL',
+  'spanish social (es-sc)':       'es-SOCIAL',
   'greek (el)':                   'el',
   'spanish (es)':                 'es',
   'french canadian (fr-ca)':      'fr-ca',
@@ -38,6 +42,9 @@ export const HEADER_TO_CODE: Record<string, string> = {
   'en-sc - english (social casino)':   'en-SOCIAL',
   'de-sc - german social':             'de-SOCIAL',
   'de-sc - german (social casino)':    'de-SOCIAL',
+  'fr-sc - french (social casino)':    'fr-SOCIAL',
+  'es-sc - spanish latam (social casino)': 'es-SOCIAL',
+  'es-sc - spanish (social casino)':   'es-SOCIAL',
   'el - greek':                        'el',
   'es - spanish':                      'es',
   'fr - ca french canadian':           'fr-ca',
@@ -64,6 +71,8 @@ const CODE_ALIAS: Record<string, string> = {
   'se':    'sv',
   'en-sc': 'en-SOCIAL',
   'de-sc': 'de-SOCIAL',
+  'fr-sc': 'fr-SOCIAL',
+  'es-sc': 'es-SOCIAL',
 };
 
 /**

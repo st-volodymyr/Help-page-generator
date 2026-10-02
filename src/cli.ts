@@ -31,6 +31,9 @@ Options:
   --values            Write real values instead of {{...}} placeholders
                       (same as unchecking "templatize" in the web tool);
                       also asked interactively, this sets the default
+  --crown            Crown format: embedded Quicksand fonts + scroll container
+                      (as in tarzanmultirush). Languages come strictly from
+                      l10ntool.langs — "en" is not added
   --name "Game Name"  Override the auto-detected game name (sheet cell A2)
   --rows 6:13         Override the detected content rows (start:end, 1-based)
   -y, --yes           Accept detected game name / rows without asking
@@ -48,6 +51,7 @@ interface Args {
   game: string;
   langs: string[] | null;
   values: boolean;
+  crown: boolean;
   name: string | null;
   rows: { start: number; end: number } | null;
   yes: boolean;
@@ -59,7 +63,7 @@ function fail(msg: string): never {
 }
 
 function parseArgs(argv: string[]): Args {
-  const a: Args = { source: '', out: null, game: '.', langs: null, values: false, name: null, rows: null, yes: false };
+  const a: Args = { source: '', out: null, game: '.', langs: null, values: false, crown: false, name: null, rows: null, yes: false };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     const next = (flag: string): string => {
@@ -72,6 +76,7 @@ function parseArgs(argv: string[]): Args {
     else if (arg === '--game')   a.game = next(arg);
     else if (arg === '--langs')  a.langs = next(arg).split(',').map(s => s.trim()).filter(Boolean);
     else if (arg === '--values') a.values = true;
+    else if (arg === '--crown')  a.crown = true;
     else if (arg === '--name')   a.name = next(arg);
     else if (arg === '--rows') {
       const m = next(arg).match(/^(\d+)[:\-](\d+)$/);
@@ -162,9 +167,13 @@ async function loadRows(source: string): Promise<string[][]> {
   return parseCSV(readFileSync(path, 'utf8'));
 }
 
-/** `en` is always wanted; the rest comes strictly from l10ntool.langs. */
+/**
+ * `en` is always wanted for PZ; the rest comes strictly from l10ntool.langs.
+ * Crown games ship only their *-SOCIAL langs, so no implicit `en` there.
+ */
 function wantedLangs(args: Args): string[] {
-  if (args.langs) return [...new Set(['en', ...args.langs])];
+  const base = args.crown ? [] : ['en'];
+  if (args.langs) return [...new Set([...base, ...args.langs])];
   const pkgPath = resolve(args.game, 'package.json');
   if (!existsSync(pkgPath)) {
     fail(`No package.json at ${pkgPath}.\n  Run from a game repo root, or pass --game <dir> / --langs a,b,c.`);
@@ -174,7 +183,7 @@ function wantedLangs(args: Args): string[] {
   if (!Array.isArray(langs)) {
     fail(`package.json has no "l10ntool.langs" array.\n  Pass --langs a,b,c to set the language list explicitly.`);
   }
-  return [...new Set(['en', ...langs.map(String)])];
+  return [...new Set([...base, ...langs.map(String)])];
 }
 
 async function main(): Promise<void> {
@@ -267,10 +276,10 @@ async function main(): Promise<void> {
   const block = rows.slice(contentStart - 1, contentEnd);
   const sections = parseSections(block, active);
   console.log(`Game: ${gameName} — ${sections.length} sections, rows ${contentStart}–${contentEnd}`);
-  console.log(`Mode: ${args.values ? 'real values' : '{{...}} placeholders'}`);
+  console.log(`Mode: ${args.values ? 'real values' : '{{...}} placeholders'}${args.crown ? ', Crown format' : ''}`);
 
   for (const lang of active) {
-    const html = buildHtml(gameName, sections, lang.col, !args.values);
+    const html = buildHtml(gameName, sections, lang.col, !args.values, args.crown ? 'crown' : 'pz');
     writeFileSync(join(outDir, `help_${lang.code}.html`), html);
     updated.push(lang.code);
   }
