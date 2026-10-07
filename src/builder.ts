@@ -35,6 +35,30 @@ export function isMultiplierList(line: string): boolean {
   return (line.match(MULTIPLIER_RE) ?? []).length >= 2;
 }
 
+/**
+ * Comparable form of a max-win amount across locales: "[250,000.00]", "250.000,00"
+ * and "250 000" all become "250000" (brackets, cents and separators dropped).
+ */
+export function amountKey(amount: string): string {
+  return amount.replace(/[\[\]]/g, '').trim().replace(/[.,]\d{1,2}$/, '').replace(/\D/g, '');
+}
+
+/**
+ * The max-win amount of one language column: the first money amount on a line
+ * that is neither an RTP line nor a multiplier list. Other amounts in the column
+ * are templatized only when they equal it — jackpot tiers such as
+ * "Mega: 1,000x the players regular bet." look like amounts but are not max win.
+ */
+function findMaxWinKey(sections: Section[], col: number): string | undefined {
+  for (const sec of sections)
+    for (const l of sec.contentByCol[col] ?? []) {
+      if (PCT_RE.test(l) || isMultiplierList(l)) continue;
+      const m = l.match(MONEY_RE);
+      if (m) return amountKey(m[0]);
+    }
+  return undefined;
+}
+
 /** Sections whose slug contains 'return' keep the shared {{game_rtp}} template name. */
 function isMainRtpSection(slug: string): boolean {
   return slug.includes('return');
@@ -44,7 +68,9 @@ function isMainRtpSection(slug: string): boolean {
  * `maxWin = false` keeps the real max-win amount (Crown has no {{maxWinnings}}
  * yet) — only the placeholder brackets ("[5,000]x") are dropped.
  */
-export function processLine(line: string, rtpParamName = 'game_rtp', templatize = true, maxWin = true): string {
+export function processLine(
+  line: string, rtpParamName = 'game_rtp', templatize = true, maxWin = true, maxWinKey?: string,
+): string {
   if (!line) return '';
   if (!templatize) return esc(line);
   if (PCT_RE.test(line))
@@ -53,7 +79,9 @@ export function processLine(line: string, rtpParamName = 'game_rtp', templatize 
       .replace(/(\d+)(\s*%)/, `{{${rtpParamName}}}$2`)
     );
   if (!maxWin) return esc(line.replace(MONEY_RE, m => m.replace(/^\[\s*|\s*\]$/g, '')));
-  if (MONEY_RE.test(line) && !isMultiplierList(line) && !line.includes('{{maxWinnings}}'))
+  const money = line.match(MONEY_RE);
+  if (money && !isMultiplierList(line) && !line.includes('{{maxWinnings}}')
+      && (maxWinKey === undefined || amountKey(money[0]) === maxWinKey))
     return [
       `<span class="not-configured_{{maxWinnings}}">`,
       `                ${esc(line.replace(MONEY_RE, '{{maxWinnings}}'))}`,
@@ -63,7 +91,9 @@ export function processLine(line: string, rtpParamName = 'game_rtp', templatize 
 }
 
 /** Crown nests sections in .scroll-container, so every non-empty line gets 4 more spaces. */
-function buildSection(sec: Section, col: number, templatize: boolean, format: HelpFormat): string {
+function buildSection(
+  sec: Section, col: number, templatize: boolean, format: HelpFormat, maxWinKey?: string,
+): string {
   const indent = format === 'crown' ? '    ' : '';
   const id    = slugify(sec.enTitle) || 'section';
   const title = sec.titleByCol[col] ?? '';
@@ -79,7 +109,7 @@ function buildSection(sec: Section, col: number, templatize: boolean, format: He
       rtpCount++;
       paramName = rtpCount === 1 ? `${id}_rtp` : `${id}_rtp_${rtpCount}`;
     }
-    return ind + processLine(l, paramName, templatize, format !== 'crown') + (i < lines.length - 1 ? '\n' + ind + '<br>' : '');
+    return ind + processLine(l, paramName, templatize, format !== 'crown', maxWinKey) + (i < lines.length - 1 ? '\n' + ind + '<br>' : '');
   });
 
   return [
@@ -96,6 +126,7 @@ function buildSection(sec: Section, col: number, templatize: boolean, format: He
 export function buildHtml(
   gameName: string, sections: Section[], col: number, templatize = true, format: HelpFormat = 'pz',
 ): string {
+  const maxWinKey = findMaxWinKey(sections, col);
   const name = [
     '    <div id="help__name" style="text-align: center;">',
     `        <h1>${esc(gameName)}</h1>`,
@@ -111,7 +142,7 @@ export function buildHtml(
       '',
       '    <div class="scroll-container">',
       '',
-      sections.map(s => buildSection(s, col, templatize, format)).join('\n\n'),
+      sections.map(s => buildSection(s, col, templatize, format, maxWinKey)).join('\n\n'),
       '    </div>',
       '</div>',
     ].join('\n');
@@ -126,7 +157,7 @@ export function buildHtml(
     '',
     ...name,
     '',
-    sections.map(s => buildSection(s, col, templatize, format)).join('\n\n'),
+    sections.map(s => buildSection(s, col, templatize, format, maxWinKey)).join('\n\n'),
     '</div>',
   ].join('\n');
 }

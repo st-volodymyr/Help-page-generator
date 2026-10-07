@@ -156,6 +156,28 @@ try {
     assert.match(readFileSync(join(tmp, 'help_fi.html'), 'utf8'), /Pyöräytä/);
   });
 
+  // Jackpot tiers ("Mega: 1,000x ...") are single amounts but not the max win.
+  const jpCsv = join(tmp, 'jackpot.csv');
+  writeFileSync(jpCsv, [
+    'Help pages,,',
+    'JP Game,,',
+    ',English (EN),Greek (EL)',
+    'How to Play,How to Play,Πώς να παίξετε',
+    'cap,"Wins will not exceed 250,000.00.","Τα κέρδη δεν υπερβαίνουν τα 250.000,00."',
+    'mega,"Mega: 1,000x the players regular bet.",Mega: 1.000x το ποντάρισμα.',
+    ',,',
+    'Copyright,© copyright,© copyright',
+  ].join('\n'));
+  const rJp = run([jpCsv, '--out', tmp, '--langs', 'en,el', '--yes']);
+  test('jackpot tier amounts are not templatized as max win', () => {
+    assert.equal(rJp.code, 0, rJp.out);
+    for (const lang of ['en', 'el']) {
+      const html = readFileSync(join(tmp, `help_${lang}.html`), 'utf8');
+      assert.equal(html.match(/not-configured_\{\{maxWinnings\}\}/g)?.length, 1, lang);
+      assert.match(html, /Mega: 1[,.]000x/);
+    }
+  });
+
   // .xlsx path uses formatted text, not raw numbers (raw:false).
   const XLSX = await import('xlsx');
   const xlsxPath = join(tmp, 'sample.xlsx');

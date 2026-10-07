@@ -87,6 +87,7 @@ Input (Google Sheets URL or .xlsx upload)
 - Line with `%` in a section whose slug contains `return` → `{{game_rtp}}`
 - Line with `%` in any other section → `{{section_slug_rtp}}` (2nd occurrence: `_rtp_2`, etc.)
 - Line with large formatted number (`\d{1,3}(?:[,. ]\d{3})+`) → `{{maxWinnings}}` wrapped in `<span class="not-configured_{{maxWinnings}}">`
+  - only when the amount equals that language's max win (the first such amount on a non-RTP, non-multiplier-list line) — jackpot tiers like `Mega: 1,000x` stay plain
 
 **Loading new sheet resets all state:**
 - Closes preview, clears `state.generated`, `state.params`, game name field, success card, resets to step 1
