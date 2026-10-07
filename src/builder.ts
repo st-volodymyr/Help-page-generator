@@ -59,6 +59,15 @@ function findMaxWinKey(sections: Section[], col: number): string | undefined {
   return undefined;
 }
 
+/**
+ * Source sheets bracket the parts that must not be translated or that are
+ * variables ("[EZ-Reel™]", "[Kronos™ 3 Thrones Of Olympus]", "[3.000]x").
+ * The brackets are authoring marks only and never reach the game.
+ */
+export function stripBrackets(s: string): string {
+  return s.replace(/\[([^\[\]]*)\]/g, '$1');
+}
+
 /** Sections whose slug contains 'return' keep the shared {{game_rtp}} template name. */
 function isMainRtpSection(slug: string): boolean {
   return slug.includes('return');
@@ -72,6 +81,7 @@ export function processLine(
   line: string, rtpParamName = 'game_rtp', templatize = true, maxWin = true, maxWinKey?: string,
 ): string {
   if (!line) return '';
+  line = stripBrackets(line);
   if (!templatize) return esc(line);
   if (PCT_RE.test(line))
     return esc(line
@@ -114,7 +124,7 @@ function buildSection(
 
   return [
     `    <div id="help__${id}">`,
-    `        <h2>${esc(title)}${title ? ':' : ''}</h2>`,
+    `        <h2>${esc(stripBrackets(title))}${title ? ':' : ''}</h2>`,
     '',
     '        <p>',
     processedLines.join('\n'),
@@ -129,7 +139,7 @@ export function buildHtml(
   const maxWinKey = findMaxWinKey(sections, col);
   const name = [
     '    <div id="help__name" style="text-align: center;">',
-    `        <h1>${esc(gameName)}</h1>`,
+    `        <h1>${esc(stripBrackets(gameName))}</h1>`,
     '    </div>',
   ];
   if (format === 'crown') {

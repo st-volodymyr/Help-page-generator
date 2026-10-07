@@ -165,6 +165,7 @@ try {
     'How to Play,How to Play,Πώς να παίξετε',
     'cap,"Wins will not exceed 250,000.00.","Τα κέρδη δεν υπερβαίνουν τα 250.000,00."',
     'mega,"Mega: 1,000x the players regular bet.",Mega: 1.000x το ποντάρισμα.',
+    'ez,A 1x3 [EZ-Reel™] video slot.,Ένα [EZ-Reel™] παιχνίδι.',
     ',,',
     'Copyright,© copyright,© copyright',
   ].join('\n'));
@@ -175,6 +176,13 @@ try {
       const html = readFileSync(join(tmp, `help_${lang}.html`), 'utf8');
       assert.equal(html.match(/not-configured_\{\{maxWinnings\}\}/g)?.length, 1, lang);
       assert.match(html, /Mega: 1[,.]000x/);
+    }
+  });
+  test('square brackets are stripped from text', () => {
+    for (const lang of ['en', 'el']) {
+      const html = readFileSync(join(tmp, `help_${lang}.html`), 'utf8');
+      assert.match(html, / EZ-Reel™ /, lang);
+      assert.doesNotMatch(html, /\[|\]/, lang);
     }
   });
 
