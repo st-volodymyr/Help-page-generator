@@ -68,6 +68,7 @@ export const HEADER_TO_CODE: Record<string, string> = {
 const CODE_ALIAS: Record<string, string> = {
   'en-ct': 'en-us-ct',
   'pt':    'pt-pt',
+  'pt-eu': 'pt-pt',
   'se':    'sv',
   'en-sc': 'en-SOCIAL',
   'de-sc': 'de-SOCIAL',
