@@ -260,6 +260,39 @@ try {
     assert.match(html, /\{\{game_rtp\}\}%/);
   });
 
+  // --amwest: the "(EN-SC amwest)" column wins when filled; otherwise the
+  // regular "(EN-SC)" column is used. --crown ignores amwest columns.
+  const awCsv = join(tmp, 'amwest.csv');
+  const awSheet = (deAmwest) => [
+    'Help pages,,,,',
+    'AW Game,,,,',
+    ',English - Social (EN-SC),English - Social (EN-SC amwest),German - Social (DE-SC),German - Social (DE-SC amwest)',
+    'How to Play,How to Play,How to Play,Spielanleitung,' + (deAmwest ? 'Spielanleitung' : ''),
+    'spin,Spin for coins.,Spin for AmWest coins.,Drehen für Münzen.,' + (deAmwest ? 'Drehen für AmWest.' : ''),
+    ',,,,',
+    'Copyright,© copyright,© copyright,© copyright,' + (deAmwest ? '© copyright' : ''),
+  ].join('\n');
+  writeFileSync(awCsv, awSheet(false));
+  const awDir = join(tmp, 'amwest');
+  mkdirSync(awDir);
+  const rAw = run([awCsv, '--out', awDir, '--langs', 'en-SOCIAL,de-SOCIAL', '--amwest', '--yes']);
+  test('--amwest takes the filled amwest column', () => {
+    assert.equal(rAw.code, 0, rAw.out);
+    assert.match(readFileSync(join(awDir, 'help_en-SOCIAL.html'), 'utf8'), /Spin for AmWest coins\./);
+    assert.match(rAw.out, /en-SOCIAL ← AmWest column/);
+  });
+  test('--amwest falls back to the regular column when amwest is empty', () => {
+    assert.match(readFileSync(join(awDir, 'help_de-SOCIAL.html'), 'utf8'), /Drehen für Münzen\./);
+    assert.match(rAw.out, /de-SOCIAL ← regular column/);
+  });
+  test('--amwest uses the Crown shell', () =>
+    assert.match(readFileSync(join(awDir, 'help_en-SOCIAL.html'), 'utf8'), /<div class="scroll-container">/));
+  const rAwCrown = run([awCsv, '--out', awDir, '--langs', 'en-SOCIAL', '--crown', '--yes']);
+  test('--crown ignores the amwest column', () => {
+    assert.equal(rAwCrown.code, 0, rAwCrown.out);
+    assert.match(readFileSync(join(awDir, 'help_en-SOCIAL.html'), 'utf8'), /Spin for coins\./);
+  });
+
   // An "Introduction" block right above "How to Play" starts the content block.
   const introCsv = join(tmp, 'intro.csv');
   writeFileSync(introCsv, readFileSync(fixture, 'utf8').replace(

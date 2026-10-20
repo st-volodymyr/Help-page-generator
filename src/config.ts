@@ -1,3 +1,5 @@
+import type { LangVariant } from './types.js';
+
 /**
  * Maps spreadsheet column header text (lowercase, trimmed) → language code.
  *
@@ -90,4 +92,19 @@ export function headerToCode(raw: string): string | null {
          ?? t.match(/^([a-z]{2}(?:-[a-z]{2,6})?)\s*-\s+\S/);       // "CODE - Language"
   if (!m) return null;
   return CODE_ALIAS[m[1]] ?? m[1];
+}
+
+const VARIANT_RE = /\s+(amwest)\s*(?=\)\s*$)/i;
+
+/**
+ * headerToCode plus platform variant columns: the variant word inside the
+ * parentheses is stripped before the code lookup, so
+ * "English - Social (EN-SC amwest)" → { code: 'en-SOCIAL', variant: 'amwest' }.
+ */
+export function parseHeader(raw: string): { code: string; variant?: LangVariant } | null {
+  const t = String(raw ?? '');
+  const m = t.match(VARIANT_RE);
+  const code = headerToCode(m ? t.replace(VARIANT_RE, '') : t);
+  if (!code) return null;
+  return m ? { code, variant: m[1].toLowerCase() as LangVariant } : { code };
 }

@@ -1,6 +1,6 @@
-import { headerToCode } from './config.js';
+import { parseHeader } from './config.js';
 import { MONEY_RE, isMultiplierList } from './builder.js';
-import type { LangEntry, Section } from './types.js';
+import type { LangEntry, LangVariant, Section } from './types.js';
 
 export function parseCSV(text: string): string[][] {
   const rows: string[][] = []; let row: string[] = [], f = '', q = false;
@@ -26,10 +26,33 @@ export function detectLanguages(rows: string[][], headerRow: number): LangEntry[
   const hdr = rows[headerRow - 1] ?? [];
   const langMap: LangEntry[] = [];
   hdr.forEach((cell, i) => {
-    const code = headerToCode(String(cell ?? ''));
-    if (code) langMap.push({ col: i, code, on: true, empty: false });
+    const h = parseHeader(String(cell ?? ''));
+    if (h) langMap.push({ col: i, code: h.code, on: true, empty: false, ...(h.variant && { variant: h.variant }) });
   });
   return langMap;
+}
+
+/**
+ * One column per language for the target platform. With `variant`, a
+ * non-empty variant column ("EN-SC amwest") replaces the plain one ("EN-SC");
+ * an empty or missing variant column falls back to the plain column. Without
+ * `variant`, variant columns are dropped. Run after markEmptyLanguages.
+ */
+export function resolveVariant(langMap: LangEntry[], variant: LangVariant | null): LangEntry[] {
+  const preferred = new Map<string, LangEntry>();
+  if (variant) {
+    for (const l of langMap) {
+      if (l.variant === variant && !l.empty && !preferred.has(l.code)) preferred.set(l.code, l);
+    }
+  }
+  const hasPlain = new Set(langMap.filter(l => !l.variant).map(l => l.code));
+  const out: LangEntry[] = [];
+  for (const l of langMap) {
+    if (!l.variant) out.push(preferred.get(l.code) ?? l);
+    // A variant column without a plain counterpart stands on its own.
+    else if (preferred.get(l.code) === l && !hasPlain.has(l.code)) out.push(l);
+  }
+  return out;
 }
 
 /**
@@ -76,7 +99,7 @@ export function parseSections(block: string[][], langs: LangEntry[]): Section[] 
  */
 export function detectHeaderRow(rows: string[][]): number | null {
   for (let i = 0; i < rows.length; i++) {
-    const matches = rows[i].filter(cell => headerToCode(String(cell ?? '')));
+    const matches = rows[i].filter(cell => parseHeader(String(cell ?? '')));
     if (matches.length >= 2) return i + 1; // 1-based
   }
   return null;

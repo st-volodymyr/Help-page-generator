@@ -31,6 +31,13 @@ sections nested in `.scroll-container`, max win kept as the real value (no
 `{{maxWinnings}}` span), and no implicit `en` — only `l10ntool.langs`
 (`en-SOCIAL`, `de-SOCIAL`, `fr-SOCIAL`, `es-SOCIAL`). PZ output is unchanged.
 
+`--amwest` = `--crown` output, but QA may add AmWest-only columns with
+`amwest` inside the header parentheses (`English - Social (EN-SC amwest)`).
+`parseHeader` (`src/config.ts`) tags them `variant: 'amwest'`;
+`resolveVariant` (`src/parser.ts`, after `markEmptyLanguages`) swaps in a
+filled amwest column for its lang and falls back to the regular column when
+it is missing or empty. Every other format drops amwest columns.
+
 ## Deployment
 
 - GitHub Pages serves from the `docs/` folder on the `main` branch (Settings → Pages → Deploy from branch → main / docs)
@@ -74,7 +81,7 @@ Input (Google Sheets URL or .xlsx upload)
   → downloadSingle() / downloadZip() → file export
 ```
 
-**Output format (PZ / Crown):** segmented toggle in Advanced settings (`input[name=format]`, remembered in localStorage `helpgen.format`). Crown → `buildHtml(..., 'crown')`, only `*-SOCIAL` lang chips pre-selected, no `maxWinnings` preview input. Same as CLI `--crown`.
+**Output format (PZ / Crown / AmWest):** segmented toggle in Advanced settings (`input[name=format]`, remembered in localStorage `helpgen.format`). Crown → `buildHtml(..., 'crown')`, only `*-SOCIAL` lang chips pre-selected, no `maxWinnings` preview input. Same as CLI `--crown`. AmWest → same build as Crown, lang map rebuilt via `resolveVariant(..., 'amwest')`; chips taken from an amwest column carry an `amwest` badge. Same as CLI `--amwest`.
 
 **Preview panel:**
 - `.app-shell` uses CSS grid: `grid-template-columns: 1fr 0px` → `440px 1fr` when `.preview-open`

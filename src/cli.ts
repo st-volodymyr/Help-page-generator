@@ -11,7 +11,7 @@ import { readFileSync, existsSync, readdirSync, writeFileSync, statSync } from '
 import { resolve, join, extname } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import {
-  parseCSV, detectHeaderRow, detectRowRange, detectLanguages, markEmptyLanguages, parseSections,
+  parseCSV, detectHeaderRow, detectRowRange, detectLanguages, markEmptyLanguages, parseSections, resolveVariant,
 } from './parser.js';
 import { sheetToCsvUrl } from './sheetUrl.js';
 import { buildHtml } from './builder.js';
@@ -34,6 +34,9 @@ Options:
   --crown            Crown format: embedded Quicksand fonts + scroll container
                       (as in tarzanmultirush). Languages come strictly from
                       l10ntool.langs — "en" is not added
+  --amwest            AmWest: Crown format, but texts come from the
+                      "(EN-SC amwest)"-style columns when they exist and are
+                      filled; otherwise from the regular "(EN-SC)" column
   --name "Game Name"  Override the auto-detected game name (sheet cell A2)
   --rows 6:13         Override the detected content rows (start:end, 1-based)
   -y, --yes           Accept detected game name / rows without asking
@@ -52,6 +55,7 @@ interface Args {
   langs: string[] | null;
   values: boolean;
   crown: boolean;
+  amwest: boolean;
   name: string | null;
   rows: { start: number; end: number } | null;
   yes: boolean;
@@ -63,7 +67,7 @@ function fail(msg: string): never {
 }
 
 function parseArgs(argv: string[]): Args {
-  const a: Args = { source: '', out: null, game: '.', langs: null, values: false, crown: false, name: null, rows: null, yes: false };
+  const a: Args = { source: '', out: null, game: '.', langs: null, values: false, crown: false, amwest: false, name: null, rows: null, yes: false };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     const next = (flag: string): string => {
@@ -77,6 +81,7 @@ function parseArgs(argv: string[]): Args {
     else if (arg === '--langs')  a.langs = next(arg).split(',').map(s => s.trim()).filter(Boolean);
     else if (arg === '--values') a.values = true;
     else if (arg === '--crown')  a.crown = true;
+    else if (arg === '--amwest') a.crown = a.amwest = true;
     else if (arg === '--name')   a.name = next(arg);
     else if (arg === '--rows') {
       const m = next(arg).match(/^(\d+)[:\-](\d+)$/);
@@ -221,7 +226,7 @@ async function main(): Promise<void> {
     fail('Could not detect the content block ("How to Play" … "© copyright").\n  Pass --rows start:end to set it explicitly.');
   }
 
-  const langMap = detectLanguages(rows, headerRow);
+  const detected = detectLanguages(rows, headerRow);
 
   let gameName = args.name ?? String(rows[1]?.[0] ?? '').trim();
   let contentStart = args.rows?.start ?? startRow ?? NaN;
@@ -254,7 +259,8 @@ async function main(): Promise<void> {
     fail(`Invalid row range ${contentStart}:${contentEnd} (sheet has ${rows.length} rows).`);
   }
 
-  markEmptyLanguages(langMap, rows, contentStart, contentEnd);
+  markEmptyLanguages(detected, rows, contentStart, contentEnd);
+  const langMap = resolveVariant(detected, args.amwest ? 'amwest' : null);
 
   const updated: string[] = [];
   const warned: string[] = [];
@@ -276,7 +282,12 @@ async function main(): Promise<void> {
   const block = rows.slice(contentStart - 1, contentEnd);
   const sections = parseSections(block, active);
   console.log(`Game: ${gameName} — ${sections.length} sections, rows ${contentStart}–${contentEnd}`);
-  console.log(`Mode: ${args.values ? 'real values' : '{{...}} placeholders'}${args.crown ? ', Crown format' : ''}`);
+  console.log(`Mode: ${args.values ? 'real values' : '{{...}} placeholders'}${args.amwest ? ', AmWest format' : args.crown ? ', Crown format' : ''}`);
+  if (args.amwest) {
+    for (const lang of active) {
+      console.log(`  ${lang.code} ← ${lang.variant ? 'AmWest column' : 'regular column (no filled AmWest column)'}`);
+    }
+  }
 
   for (const lang of active) {
     const html = buildHtml(gameName, sections, lang.col, !args.values, args.crown ? 'crown' : 'pz');

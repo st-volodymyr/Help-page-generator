@@ -1,11 +1,14 @@
 import './style.css';
 import { state } from './state.js';
-import { parseCSV, detectLanguages, detectHeaderRow, detectRowRange, markEmptyLanguages } from './parser.js';
+import { parseCSV, detectLanguages, detectHeaderRow, detectRowRange, markEmptyLanguages, resolveVariant } from './parser.js';
 import { sheetToCsvUrl } from './sheetUrl.js';
 import { generate, downloadZip, downloadSingle } from './generator.js';
 import { openPreview, closePreview, getActiveLang } from './preview.js';
 import type { LogType } from './types.js';
 import type { HelpFormat } from './builder.js';
+
+/** AmWest = Crown output built from the "(EN-SC amwest)" columns when present. */
+type OutputFormat = HelpFormat | 'amwest';
 
 // ── DOM refs ──────────────────────────────────────────────────
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -215,45 +218,52 @@ function redetectLanguages(): void {
     state.langMap = [];
     return;
   }
-  state.langMap = detectLanguages(state.sheetData!, headerRow);
+  const detected = detectLanguages(state.sheetData!, headerRow);
 
   const startRow = parseInt(startRowEl.value, 10);
   const endRow   = parseInt(endRowEl.value, 10);
   if (startRow && endRow) {
-    markEmptyLanguages(state.langMap, state.sheetData!, startRow, endRow);
+    markEmptyLanguages(detected, state.sheetData!, startRow, endRow);
   }
+  state.langMap = resolveVariant(detected, getFormat() === 'amwest' ? 'amwest' : null);
 
   applyFormatLangDefaults();
   renderLangChips();
 }
 
-// ── Output format (PZ / Crown) ────────────────────────────────
+// ── Output format (PZ / Crown / AmWest) ───────────────────────
 const FORMAT_KEY = 'helpgen.format';
-const FORMAT_HINT: Record<HelpFormat, string> = {
-  pz:    '// PlayZido game',
-  crown: '// Crown game, *-SOCIAL langs',
+const FORMAT_HINT: Record<OutputFormat, string> = {
+  pz:     '// PlayZido game',
+  crown:  '// Crown game, *-SOCIAL langs',
+  amwest: '// AmWest game, "amwest" columns first',
 };
 
-function getFormat(): HelpFormat {
-  return [...formatEls].find(el => el.checked)?.value === 'crown' ? 'crown' : 'pz';
+function toFormat(v: string | null | undefined): OutputFormat {
+  return v === 'crown' || v === 'amwest' ? v : 'pz';
 }
 
-/** Crown games ship only the *-SOCIAL langs; PZ takes every non-empty column. */
+function getFormat(): OutputFormat {
+  return toFormat([...formatEls].find(el => el.checked)?.value);
+}
+
+/** Crown / AmWest games ship only the *-SOCIAL langs; PZ takes every non-empty column. */
 function applyFormatLangDefaults(): void {
-  const crown = getFormat() === 'crown';
-  state.langMap.forEach(l => { l.on = !l.empty && (!crown || l.code.endsWith('-SOCIAL')); });
+  const social = getFormat() !== 'pz';
+  state.langMap.forEach(l => { l.on = !l.empty && (!social || l.code.endsWith('-SOCIAL')); });
 }
 
 function onFormatChange(): void {
   const format = getFormat();
   $('formatHint').textContent = FORMAT_HINT[format];
   try { localStorage.setItem(FORMAT_KEY, format); } catch { /* storage blocked */ }
-  if (state.langMap.length) { applyFormatLangDefaults(); renderLangChips(); }
+  // AmWest picks different columns, so the lang map is rebuilt, not just re-toggled.
+  if (state.sheetData) redetectLanguages();
 }
 
 try {
-  const saved = localStorage.getItem(FORMAT_KEY);
-  formatEls.forEach(el => { el.checked = el.value === (saved === 'crown' ? 'crown' : 'pz'); });
+  const saved = toFormat(localStorage.getItem(FORMAT_KEY));
+  formatEls.forEach(el => { el.checked = el.value === saved; });
 } catch { /* storage blocked — keep the default */ }
 formatEls.forEach(el => el.addEventListener('change', onFormatChange));
 $('formatHint').textContent = FORMAT_HINT[getFormat()];
@@ -268,8 +278,11 @@ function renderLangChips(): void {
   state.langMap.forEach((lang, i) => {
     const lbl = document.createElement('label');
     lbl.className = 'lang-chip' + (lang.on ? ' on' : '') + (lang.empty ? ' empty' : '');
-    lbl.title = lang.empty ? `${lang.code} — no content in this row range` : lang.code;
-    lbl.innerHTML = `<input type="checkbox" ${lang.on ? 'checked' : ''}>${lang.code}${lang.empty ? ' <span class="chip-empty-badge">empty</span>' : ''}`;
+    lbl.title = lang.empty ? `${lang.code} — no content in this row range`
+              : lang.variant ? `${lang.code} — from the "${lang.variant}" column` : lang.code;
+    lbl.innerHTML = `<input type="checkbox" ${lang.on ? 'checked' : ''}>${lang.code}`
+      + (lang.variant ? ` <span class="chip-empty-badge">${lang.variant}</span>` : '')
+      + (lang.empty ? ' <span class="chip-empty-badge">empty</span>' : '');
     lbl.querySelector('input')!.addEventListener('change', (e: Event) => {
       state.langMap[i].on = (e.target as HTMLInputElement).checked;
       lbl.classList.toggle('on', state.langMap[i].on);
@@ -310,9 +323,12 @@ generateBtn.addEventListener('click', async () => {
     clog('info', `rows      = ${startRow}–${endRow}`);
     clog('info', `langs     = ${activeLangs.map(l => l.code).join(', ')}`);
     clog('info', `templatize = ${templatize ? 'on ({{...}} placeholders)' : 'off (real values)'}`);
-    clog('info', `format    = ${format === 'crown' ? 'Crown' : 'PZ'}`);
+    clog('info', `format    = ${{ pz: 'PZ', crown: 'Crown', amwest: 'AmWest' }[format]}`);
+    if (format === 'amwest') {
+      activeLangs.forEach(l => clog('info', `${l.code} ← ${l.variant ? 'AmWest column' : 'regular column (no filled AmWest column)'}`));
+    }
 
-    const { sections } = generate(gameName, startRow, endRow, activeLangs, clog, templatize, format);
+    const { sections } = generate(gameName, startRow, endRow, activeLangs, clog, templatize, format === 'pz' ? 'pz' : 'crown');
 
     $('successDetail').textContent =
       `${activeLangs.length} files · ${sections.length} sections · "${gameName}"`;

@@ -23,6 +23,7 @@ If `<source>` is omitted, the CLI asks for it interactively.
 | `--langs a,b,c` | Override the language list entirely |
 | `--values` | Write real values instead of `{{...}}` placeholders (same as unchecking "templatize" in the web tool); also asked interactively — the flag just sets the default |
 | `--crown` | Crown format — embedded Quicksand fonts, Crown styles and `.scroll-container` (same shell as `tarzanmultirush`). Max win stays a real value (no `{{maxWinnings}}`); RTP placeholders as usual. Langs come strictly from `l10ntool.langs`, `en` is **not** added |
+| `--amwest` | AmWest format — same output as `--crown`, but texts are taken from AmWest columns (`amwest` inside the header parentheses, e.g. `English - Social (EN-SC amwest)`) when they exist and are filled; otherwise from the regular column (`English - Social (EN-SC)`). The run prints which column each language came from |
 | `--name "Game"` | Override the auto-detected game name (cell A2) |
 | `--rows 6:13` | Override the detected content row range (start:end, 1-based) |
 | `-y`, `--yes` | Skip the interactive confirmation of game name / rows |
@@ -51,6 +52,8 @@ Crown games add the flag to the script itself:
 "scripts": { "help:gen": "npm exec --yes --package=github:st-volodymyr/Help-page-generator -- help-page-generator --crown" }
 ```
 
+AmWest games use `--amwest` instead of `--crown`.
+
 The explicit `npm exec … -- help-page-generator` form is deliberate: plain
 `npx github:…` silently runs nothing on some npm versions (default-bin
 inference bug). Note for PowerShell users passing extra *flags* through
@@ -61,7 +64,7 @@ inference bug). Note for PowerShell users passing extra *flags* through
 
 1. Open the tool URL above
 2. Paste your Google Sheet link **or** upload the `.xlsx` export — game name, row range, and language row are auto-detected
-3. Review the detected languages (empty columns are flagged automatically). For Crown games switch **Advanced settings → Output format** to **Crown** (only `*-SOCIAL` languages get selected)
+3. Review the detected languages (empty columns are flagged automatically). For Crown games switch **Advanced settings → Output format** to **Crown** (only `*-SOCIAL` languages get selected); for AmWest games pick **AmWest** — languages taken from an `(… amwest)` column are marked with an `amwest` badge
 4. Click **Generate & Preview** to see the result in the live preview panel
 5. Use **↓ Download current language (.html)** or **↓ Download all languages (ZIP)** to export
 
