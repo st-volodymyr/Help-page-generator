@@ -8,7 +8,7 @@ import type { LogType } from './types.js';
 import type { HelpFormat } from './builder.js';
 
 /** AmWest = Crown output built from the "(EN-SC amwest)" columns when present. */
-type OutputFormat = HelpFormat | 'amwest';
+type OutputFormat = HelpFormat;
 
 // ── DOM refs ──────────────────────────────────────────────────
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -328,7 +328,7 @@ generateBtn.addEventListener('click', async () => {
       activeLangs.forEach(l => clog('info', `${l.code} ← ${l.variant ? 'AmWest column' : 'regular column (no filled AmWest column)'}`));
     }
 
-    const { sections } = generate(gameName, startRow, endRow, activeLangs, clog, templatize, format === 'pz' ? 'pz' : 'crown');
+    const { sections } = generate(gameName, startRow, endRow, activeLangs, clog, templatize, format);
 
     $('successDetail').textContent =
       `${activeLangs.length} files · ${sections.length} sections · "${gameName}"`;

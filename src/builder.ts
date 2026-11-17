@@ -1,8 +1,33 @@
 import type { Section } from './types.js';
 import { CROWN_STYLE } from './crownStyle.js';
 
-/** 'pz' — PlayZido help fragment; 'crown' — Crown fragment (embedded fonts, scroll container). */
-export type HelpFormat = 'pz' | 'crown';
+/**
+ * 'pz' — PlayZido help fragment; 'crown' — Crown fragment (embedded fonts, scroll container);
+ * 'amwest' — the Crown fragment with the max win kept as the real value (AmWest drops that line).
+ */
+export type HelpFormat = 'pz' | 'crown' | 'amwest';
+
+/**
+ * How the max-win line is written:
+ * - 'pz'      — amount → `{{maxWinnings}}`, line wrapped in `<span class="not-configured_{{maxWinnings}}">`;
+ * - 'crown'   — amount → `{{max_win_multiplier}}` (the Crown wrapper fills it from the gateway join
+ *               `chips.gameCapAmount.multiplier`), line wrapped in `<span class="crown-max-win">`,
+ *               which the wrapper hides when there is no cap;
+ * - 'literal' — the real amount stays, only its placeholder brackets are dropped.
+ */
+export type MaxWinMode = 'pz' | 'crown' | 'literal';
+
+/** Crown max-win placeholder, filled at runtime by the Crown wrapper like {{game_rtp}}. */
+export const CROWN_MAX_WIN_PARAM = 'max_win_multiplier';
+
+const MAX_WIN_WRAP: Record<'pz' | 'crown', { param: string; cls: string }> = {
+  pz:    { param: 'maxWinnings',       cls: 'not-configured_{{maxWinnings}}' },
+  crown: { param: CROWN_MAX_WIN_PARAM, cls: 'crown-max-win' },
+};
+
+function maxWinModeOf(format: HelpFormat): MaxWinMode {
+  return format === 'amwest' ? 'literal' : format;
+}
 
 export function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -74,11 +99,11 @@ function isMainRtpSection(slug: string): boolean {
 }
 
 /**
- * `maxWin = false` keeps the real max-win amount (Crown has no {{maxWinnings}}
- * yet) — only the placeholder brackets ("[5,000]x") are dropped.
+ * `maxWin` picks how the max-win amount is written (see MaxWinMode); 'literal'
+ * keeps the real amount — only the placeholder brackets ("[5,000]x") are dropped.
  */
 export function processLine(
-  line: string, rtpParamName = 'game_rtp', templatize = true, maxWin = true, maxWinKey?: string,
+  line: string, rtpParamName = 'game_rtp', templatize = true, maxWin: MaxWinMode = 'pz', maxWinKey?: string,
 ): string {
   if (!line) return '';
   line = stripBrackets(line);
@@ -88,13 +113,14 @@ export function processLine(
       .replace(/(\d+[.,]\d+)(\s*%)/, `{{${rtpParamName}}}$2`)
       .replace(/(\d+)(\s*%)/, `{{${rtpParamName}}}$2`)
     );
-  if (!maxWin) return esc(line.replace(MONEY_RE, m => m.replace(/^\[\s*|\s*\]$/g, '')));
+  if (maxWin === 'literal') return esc(line.replace(MONEY_RE, m => m.replace(/^\[\s*|\s*\]$/g, '')));
+  const { param, cls } = MAX_WIN_WRAP[maxWin];
   const money = line.match(MONEY_RE);
-  if (money && !isMultiplierList(line) && !line.includes('{{maxWinnings}}')
+  if (money && !isMultiplierList(line) && !line.includes(`{{${param}}}`)
       && (maxWinKey === undefined || amountKey(money[0]) === maxWinKey))
     return [
-      `<span class="not-configured_{{maxWinnings}}">`,
-      `                ${esc(line.replace(MONEY_RE, '{{maxWinnings}}'))}`,
+      `<span class="${cls}">`,
+      `                ${esc(line.replace(MONEY_RE, `{{${param}}}`))}`,
       `            </span>`,
     ].join('\n');
   return esc(line);
@@ -104,7 +130,7 @@ export function processLine(
 function buildSection(
   sec: Section, col: number, templatize: boolean, format: HelpFormat, maxWinKey?: string,
 ): string {
-  const indent = format === 'crown' ? '    ' : '';
+  const indent = format === 'pz' ? '' : '    ';
   const id    = slugify(sec.enTitle) || 'section';
   const title = sec.titleByCol[col] ?? '';
   const lines = sec.contentByCol[col] ?? [];
@@ -119,7 +145,7 @@ function buildSection(
       rtpCount++;
       paramName = rtpCount === 1 ? `${id}_rtp` : `${id}_rtp_${rtpCount}`;
     }
-    return ind + processLine(l, paramName, templatize, format !== 'crown', maxWinKey) + (i < lines.length - 1 ? '\n' + ind + '<br>' : '');
+    return ind + processLine(l, paramName, templatize, maxWinModeOf(format), maxWinKey) + (i < lines.length - 1 ? '\n' + ind + '<br>' : '');
   });
 
   return [
@@ -142,7 +168,7 @@ export function buildHtml(
     `        <h1>${esc(stripBrackets(gameName))}</h1>`,
     '    </div>',
   ];
-  if (format === 'crown') {
+  if (format !== 'pz') {
     // Same shell as the Crown reference games (tarzanmultirush / tarzanxpotz).
     return [
       '<div id="content-help">',

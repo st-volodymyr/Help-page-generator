@@ -32,11 +32,14 @@ Options:
                       (same as unchecking "templatize" in the web tool);
                       also asked interactively, this sets the default
   --crown            Crown format: embedded Quicksand fonts + scroll container
-                      (as in tarzanmultirush). Languages come strictly from
-                      l10ntool.langs — "en" is not added
+                      (as in tarzanmultirush). The max-win amount becomes
+                      {{max_win_multiplier}} in <span class="crown-max-win">
+                      (filled by the Crown wrapper). Languages come strictly
+                      from l10ntool.langs — "en" is not added
   --amwest            AmWest: Crown format, but texts come from the
                       "(EN-SC amwest)"-style columns when they exist and are
-                      filled; otherwise from the regular "(EN-SC)" column
+                      filled; otherwise from the regular "(EN-SC)" column.
+                      The max win stays the real value
   --name "Game Name"  Override the auto-detected game name (sheet cell A2)
   --rows 6:13         Override the detected content rows (start:end, 1-based)
   -y, --yes           Accept detected game name / rows without asking
@@ -290,7 +293,7 @@ async function main(): Promise<void> {
   }
 
   for (const lang of active) {
-    const html = buildHtml(gameName, sections, lang.col, !args.values, args.crown ? 'crown' : 'pz');
+    const html = buildHtml(gameName, sections, lang.col, !args.values, args.amwest ? 'amwest' : args.crown ? 'crown' : 'pz');
     writeFileSync(join(outDir, `help_${lang.code}.html`), html);
     updated.push(lang.code);
   }

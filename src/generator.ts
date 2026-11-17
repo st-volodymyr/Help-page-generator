@@ -1,6 +1,6 @@
 import { state } from './state.js';
 import { parseSections, extractDefaults } from './parser.js';
-import { buildHtml, slugify } from './builder.js';
+import { buildHtml, slugify, CROWN_MAX_WIN_PARAM } from './builder.js';
 import type { HelpFormat } from './builder.js';
 import type { LangEntry, ClogFn } from './types.js';
 
@@ -61,8 +61,13 @@ export function generate(
 
   const enLang = activeLangs.find(l => l.code === 'en') ?? activeLangs[0];
   state.params = templatize ? extractParamDefaults(sections, enLang.col, block) : {};
-  // Crown keeps the real max-win value — there is no {{maxWinnings}} to fill in.
-  if (format === 'crown') delete state.params['maxWinnings'];
+  // Crown has {{max_win_multiplier}} instead of {{maxWinnings}}; AmWest keeps the
+  // real max-win value, so there is nothing to fill in.
+  if (format !== 'pz') {
+    const maxWin = state.params['maxWinnings'];
+    delete state.params['maxWinnings'];
+    if (format === 'crown' && maxWin) state.params[CROWN_MAX_WIN_PARAM] = maxWin;
+  }
 
   return { sections };
 }

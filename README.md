@@ -22,8 +22,8 @@ If `<source>` is omitted, the CLI asks for it interactively.
 | `--game <dir>` | Game repo root with `package.json` (default: current dir) |
 | `--langs a,b,c` | Override the language list entirely |
 | `--values` | Write real values instead of `{{...}}` placeholders (same as unchecking "templatize" in the web tool); also asked interactively — the flag just sets the default |
-| `--crown` | Crown format — embedded Quicksand fonts, Crown styles and `.scroll-container` (same shell as `tarzanmultirush`). Max win stays a real value (no `{{maxWinnings}}`); RTP placeholders as usual. Langs come strictly from `l10ntool.langs`, `en` is **not** added |
-| `--amwest` | AmWest format — same output as `--crown`, but texts are taken from AmWest columns (`amwest` inside the header parentheses, e.g. `English - Social (EN-SC amwest)`) when they exist and are filled; otherwise from the regular column (`English - Social (EN-SC)`). The run prints which column each language came from |
+| `--crown` | Crown format — embedded Quicksand fonts, Crown styles and `.scroll-container` (same shell as `tarzanmultirush`). The max-win amount becomes `{{max_win_multiplier}}` inside `<span class="crown-max-win">` (see the table below); RTP placeholders as usual. Langs come strictly from `l10ntool.langs`, `en` is **not** added |
+| `--amwest` | AmWest format — same output as `--crown`, but texts are taken from AmWest columns (`amwest` inside the header parentheses, e.g. `English - Social (EN-SC amwest)`) when they exist and are filled; otherwise from the regular column (`English - Social (EN-SC)`). The run prints which column each language came from. Unlike `--crown`, the max win stays the real value (AmWest removes that line by hand) |
 | `--name "Game"` | Override the auto-detected game name (cell A2) |
 | `--rows 6:13` | Override the detected content row range (start:end, 1-based) |
 | `-y`, `--yes` | Skip the interactive confirmation of game name / rows |
@@ -82,7 +82,8 @@ inference bug). Note for PowerShell users passing extra *flags* through
 | Variable | Source |
 |---|---|
 | `{{game_rtp}}` | Any `%` value in the "Return to Player" section |
-| `{{maxWinnings}}` | First large formatted number (e.g. `250,000.00`) |
+| `{{maxWinnings}}` | PZ: first large formatted number (e.g. `250,000.00`), line wrapped in `<span class="not-configured_{{maxWinnings}}">` |
+| `{{max_win_multiplier}}` | Crown (`--crown`, not `--amwest`): the same max-win amount (`[5,000]x` → `{{max_win_multiplier}}x`, the wording around it stays from the sheet), line wrapped in `<span class="crown-max-win">`. Filled at runtime by the Crown wrapper from the gateway join `chips.gameCapAmount.multiplier`; the wrapper hides `.crown-max-win` when there is no cap. Jackpot tier lists (`25x, 50x, … 1.000x`) and tier lines with a different amount (`Mega: 1,000x`) stay literal |
 | `{{ante_bet_rules_rtp}}` | `%` values in the Ante Bet Rules section |
 | `{{feature_buy_rules_rtp}}` | `%` values in the Feature Buy Rules section |
 | `{{section_name_rtp_N}}` | Any other section with `%` values |

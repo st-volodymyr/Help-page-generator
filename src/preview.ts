@@ -113,7 +113,7 @@ export function openPreview(langs: LangEntry[], allLangs: LangEntry[]): void {
   const varsRow = $('previewVarsRow');
   varsRow.innerHTML = '';
 
-  const mainKeys   = ['game_rtp', 'maxWinnings'].filter(k => k in state.params);
+  const mainKeys   = ['game_rtp', 'maxWinnings', 'max_win_multiplier'].filter(k => k in state.params);
   const sectionKeys = Object.keys(state.params).filter(k => !mainKeys.includes(k));
 
   if (mainKeys.length)    varsRow.appendChild(makeGroupRow('// main', mainKeys, 'var-input-main'));

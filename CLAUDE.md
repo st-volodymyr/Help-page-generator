@@ -27,11 +27,18 @@ never commit it.
 `--crown` switches `buildHtml` to the Crown format (Crown games run
 `help:gen … --crown`): the `<style>` block from `src/crownStyle.ts` (embedded
 Quicksand base64 fonts, copied from `cronwCoins/tarzanmultirush/help`),
-sections nested in `.scroll-container`, max win kept as the real value (no
-`{{maxWinnings}}` span), and no implicit `en` — only `l10ntool.langs`
+sections nested in `.scroll-container`, the max-win amount as
+`{{max_win_multiplier}}` in `<span class="crown-max-win">` (see `processLine`
+below), and no implicit `en` — only `l10ntool.langs`
 (`en-SOCIAL`, `de-SOCIAL`, `fr-SOCIAL`, `es-SOCIAL`). PZ output is unchanged.
+The Crown wrapper fills `{{max_win_multiplier}}` from the gateway join
+`chips.gameCapAmount.multiplier` (like `{{game_rtp}}`) and hides
+`.crown-max-win` when there is no cap. Old Crown games use
+`not-configured_{{maxWinnings}}` — never reuse that name/class for Crown.
 
-`--amwest` = `--crown` output, but QA may add AmWest-only columns with
+`--amwest` = `--crown` output (`HelpFormat` `'amwest'`), except the max win
+stays the real value (`MaxWinMode` `'literal'`; AmWest deletes that line by
+hand), and QA may add AmWest-only columns with
 `amwest` inside the header parentheses (`English - Social (EN-SC amwest)`).
 `parseHeader` (`src/config.ts`) tags them `variant: 'amwest'`;
 `resolveVariant` (`src/parser.ts`, after `markEmptyLanguages`) swaps in a
@@ -81,13 +88,13 @@ Input (Google Sheets URL or .xlsx upload)
   → downloadSingle() / downloadZip() → file export
 ```
 
-**Output format (PZ / Crown / AmWest):** segmented toggle in Advanced settings (`input[name=format]`, remembered in localStorage `helpgen.format`). Crown → `buildHtml(..., 'crown')`, only `*-SOCIAL` lang chips pre-selected, no `maxWinnings` preview input. Same as CLI `--crown`. AmWest → same build as Crown, lang map rebuilt via `resolveVariant(..., 'amwest')`; chips taken from an amwest column carry an `amwest` badge. Same as CLI `--amwest`.
+**Output format (PZ / Crown / AmWest):** segmented toggle in Advanced settings (`input[name=format]`, remembered in localStorage `helpgen.format`). Crown → `buildHtml(..., 'crown')`, only `*-SOCIAL` lang chips pre-selected, `max_win_multiplier` preview input (EN max-win amount) instead of `maxWinnings`. Same as CLI `--crown`. AmWest → `buildHtml(..., 'amwest')` (Crown build, real max win, no max-win input), lang map rebuilt via `resolveVariant(..., 'amwest')`; chips taken from an amwest column carry an `amwest` badge. Same as CLI `--amwest`.
 
 **Preview panel:**
 - `.app-shell` uses CSS grid: `grid-template-columns: 1fr 0px` → `440px 1fr` when `.preview-open`
 - Transition animates the split (Chrome 107+, Firefox 119+)
 - Preview renders in `<iframe srcdoc>` with dark game-matching styles (#0d0d0d bg, #fff text, Arial)
-- Param inputs are built dynamically in two groups: **// main** (`game_rtp`, `maxWinnings`) and **// section rtp** (all others)
+- Param inputs are built dynamically in two groups: **// main** (`game_rtp`, `maxWinnings` / `max_win_multiplier`) and **// section rtp** (all others)
 - `not-configured_{{maxWinnings}}` class → replaced with `is-configured` when value is set
 
 **`processLine` substitution rules:**
@@ -95,6 +102,7 @@ Input (Google Sheets URL or .xlsx upload)
 - Line with `%` in any other section → `{{section_slug_rtp}}` (2nd occurrence: `_rtp_2`, etc.)
 - Line with large formatted number (`\d{1,3}(?:[,. ]\d{3})+`) → `{{maxWinnings}}` wrapped in `<span class="not-configured_{{maxWinnings}}">`
   - only when the amount equals that language's max win (the first such amount on a non-RTP, non-multiplier-list line) — jackpot tiers like `Mega: 1,000x` stay plain
+  - Crown (`MaxWinMode` `'crown'`): same detection, `{{max_win_multiplier}}` wrapped in `<span class="crown-max-win">`; AmWest (`'literal'`) and `--values` keep the real amount, no span
 - Square brackets are authoring marks: `[EZ-Reel™]` → `EZ-Reel™` in every line, title and game name (`stripBrackets`)
 
 **Loading new sheet resets all state:**

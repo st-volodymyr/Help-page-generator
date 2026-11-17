@@ -90,10 +90,61 @@ const other: Case[] = [
     expected: "The maximum value a collector multiplier can reach is 100x." },
 ];
 
+// Crown: the amount becomes {{max_win_multiplier}} (filled by the Crown wrapper from
+// chips.gameCapAmount.multiplier), wrapped in <span class="crown-max-win">.
+const crownWrapped = (inner: string) =>
+  ['<span class="crown-max-win">', `                ${inner}`, '            </span>'].join('\n');
+const crown: Case[] = [
+  { name: 'crown en (comma)',
+    input: "The maximum win for this game is 5,000x the player’s play amount.",
+    expected: crownWrapped("The maximum win for this game is {{max_win_multiplier}}x the player’s play amount.") },
+  { name: 'crown en (bracketed)',
+    input: "The maximum win for this game is [5,000]x the player’s play amount.",
+    expected: crownWrapped("The maximum win for this game is {{max_win_multiplier}}x the player’s play amount.") },
+  { name: 'crown de (period, -fache)',
+    input: "Der maximale Gewinn für dieses Spiel beträgt das 5.000-fache des Spielbetrags des Spielers.",
+    expected: crownWrapped("Der maximale Gewinn für dieses Spiel beträgt das {{max_win_multiplier}}-fache des Spielbetrags des Spielers.") },
+  { name: 'crown de (period, x)',
+    input: "Der maximale Gewinn beträgt 5.000x den Spielbetrag.",
+    expected: crownWrapped("Der maximale Gewinn beträgt {{max_win_multiplier}}x den Spielbetrag.") },
+  { name: 'crown es (period)',
+    input: "El premio máximo de este juego es de 5.000x el valor de juego del jugador.",
+    expected: crownWrapped("El premio máximo de este juego es de {{max_win_multiplier}}x el valor de juego del jugador.") },
+  { name: 'crown fr (no-break space U+00A0)',
+    input: "Le montant maximum remporté dans ce jeu est de 5 000x le montant de jeu du joueur.",
+    expected: crownWrapped("Le montant maximum remporté dans ce jeu est de {{max_win_multiplier}}x le montant de jeu du joueur.") },
+  { name: 'crown fr (narrow no-break space U+202F)',
+    input: "Le montant maximum remporté dans ce jeu est de 5 000x le montant de jeu du joueur.",
+    expected: crownWrapped("Le montant maximum remporté dans ce jeu est de {{max_win_multiplier}}x le montant de jeu du joueur.") },
+  { name: 'crown fr (bracketed, U+00A0)',
+    input: "Le gain maximum est de [5 000] fois la mise.",
+    expected: crownWrapped("Le gain maximum est de {{max_win_multiplier}} fois la mise.") },
+  { name: 'crown jackpot list untouched',
+    input: "I valori dei jackpot sono 25x, 50x, 100x, 200x e 1.000x della puntata regolare del giocatore.",
+    expected: "I valori dei jackpot sono 25x, 50x, 100x, 200x e 1.000x della puntata regolare del giocatore." },
+  { name: 'crown es jackpot list untouched',
+    input: "Los valores son 25x, 50x, 100x, 200x e 1.000x la apuesta.",
+    expected: "Los valores son 25x, 50x, 100x, 200x e 1.000x la apuesta." },
+  { name: 'crown lone multiplier untouched',
+    input: "The maximum value a collector multiplier can reach is 100x.",
+    expected: "The maximum value a collector multiplier can reach is 100x." },
+];
+
+// AmWest ('literal'): the real amount stays, brackets dropped, no span.
+const literal: Case[] = [
+  { name: 'literal en (bracketed)',
+    input: "The maximum win for this game is [5,000]x the player’s play amount.",
+    expected: "The maximum win for this game is 5,000x the player’s play amount." },
+];
+
 let failed = 0;
-const all = [...maxWin, ...jackpot, ...other];
+const all = [
+  ...[...maxWin, ...jackpot, ...other].map(c => ({ ...c, run: () => processLine(c.input) })),
+  ...crown.map(c => ({ ...c, run: () => processLine(c.input, 'game_rtp', true, 'crown') })),
+  ...literal.map(c => ({ ...c, run: () => processLine(c.input, 'game_rtp', true, 'literal') })),
+];
 for (const c of all) {
-  const actual = processLine(c.input);
+  const actual = c.run();
   const ok = actual === c.expected;
   if (!ok) failed++;
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${c.name}`);

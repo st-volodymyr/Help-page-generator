@@ -253,11 +253,71 @@ try {
     assert.match(html, /    <\/div>\n<\/div>$/);
   });
 
-  test('--crown keeps the real max win, RTP stays a placeholder', () => {
+  test('--crown templatizes the max win as {{max_win_multiplier}} in .crown-max-win', () => {
     const html = readFileSync(join(crownDir, 'help_es.html'), 'utf8');
-    assert.match(html, /La ganancia máxima es 3\.000x\./);
-    assert.doesNotMatch(html, /maxWinnings/);
+    assert.match(html,
+      /\n {16}<span class="crown-max-win">\n {20}La ganancia máxima es \{\{max_win_multiplier\}\}x\.\n {16}<\/span>/);
+    assert.equal(html.match(/crown-max-win/g)?.length, 1);
+    assert.doesNotMatch(html, /maxWinnings|not-configured_{/);
     assert.match(html, /\{\{game_rtp\}\}%/);
+  });
+  test('pz output has no Crown max-win marker', () => {
+    const html = readFileSync(join(tmp, 'help_en.html'), 'utf8');
+    assert.doesNotMatch(html, /max_win_multiplier|crown-max-win/);
+  });
+  const crownValsDir = join(tmp, 'crown-values');
+  mkdirSync(crownValsDir);
+  const rCrownVals = run([fixture, '--out', crownValsDir, '--langs', 'es', '--crown', '--values', '--yes']);
+  test('--crown --values keeps the real max win without the span', () => {
+    assert.equal(rCrownVals.code, 0, rCrownVals.out);
+    const html = readFileSync(join(crownValsDir, 'help_es.html'), 'utf8');
+    assert.match(html, /La ganancia máxima es 3\.000x\./);
+    assert.doesNotMatch(html, /\{\{|crown-max-win/);
+  });
+
+  // Crown max-win across locales; jackpot tiers / multiplier lists stay literal.
+  // Max-win detection is the pz one: the first single amount on a non-RTP,
+  // non-list line is the max win, so the tier line comes after it.
+  const cmCsv = join(tmp, 'crown-max.csv');
+  writeFileSync(cmCsv, [
+    'Help pages,,,,',
+    'CM Game,,,,',
+    ',English - Social (EN-SC),German - Social (DE-SC),French - Social (FR-SC),Spanish - Social (ES-SC)',
+    'How to Play,How to Play,Spielanleitung,Comment jouer,Cómo jugar',
+    'jp,"Jackpots pay 25x, 50x, 100x, 200x & 1,000x the play amount.","Jackpots zahlen 25x, 50x, 100x, 200x und 1.000x.","Jackpots : 25x, 50x, 100x, 200x et 1 000x.","Los botes son 25x, 50x, 100x, 200x e 1.000x."',
+    'max,"The maximum win for this game is [5,000]x the player’s play amount.",Der maximale Gewinn beträgt das 5.000-fache des Spielbetrags.,Le montant maximum est de 5 000x le montant de jeu.,El premio máximo es de 5.000x el valor de juego.',
+    'mega,"Mega: 1,000x the play amount.",Mega: 1.000x den Spielbetrag.,Mega : 1 000x la mise.,Mega: 1.000x el valor.',
+    ',,,,',
+    'Copyright,© copyright,© copyright,© copyright,© copyright',
+  ].join('\n'));
+  const cmDir = join(tmp, 'crown-max');
+  mkdirSync(cmDir);
+  const cmLangs = ['en-SOCIAL', 'de-SOCIAL', 'fr-SOCIAL', 'es-SOCIAL'];
+  const rCm = run([cmCsv, '--out', cmDir, '--langs', cmLangs.join(','), '--crown', '--yes']);
+  test('--crown: one max-win placeholder per lang, tiers untouched', () => {
+    assert.equal(rCm.code, 0, rCm.out);
+    const expected = {
+      'en-SOCIAL': 'The maximum win for this game is {{max_win_multiplier}}x the player’s play amount.',
+      'de-SOCIAL': 'Der maximale Gewinn beträgt das {{max_win_multiplier}}-fache des Spielbetrags.',
+      'fr-SOCIAL': 'Le montant maximum est de {{max_win_multiplier}}x le montant de jeu.',
+      'es-SOCIAL': 'El premio máximo es de {{max_win_multiplier}}x el valor de juego.',
+    };
+    for (const lang of cmLangs) {
+      const html = readFileSync(join(cmDir, `help_${lang}.html`), 'utf8');
+      assert.equal(html.match(/\{\{max_win_multiplier\}\}/g)?.length, 1, lang);
+      assert.ok(html.includes(`<span class="crown-max-win">\n                    ${expected[lang]}\n                </span>`), lang);
+      assert.match(html, /Mega ?: 1[,. ]000x/, lang);
+      assert.match(html, /200x (&amp;|und|et|e) 1[,. ]000x/, lang);
+    }
+  });
+  const awMaxDir = join(tmp, 'amwest-max');
+  mkdirSync(awMaxDir);
+  const rAwMax = run([cmCsv, '--out', awMaxDir, '--langs', 'en-SOCIAL', '--amwest', '--yes']);
+  test('--amwest keeps the real max win (no placeholder, no span)', () => {
+    assert.equal(rAwMax.code, 0, rAwMax.out);
+    const html = readFileSync(join(awMaxDir, 'help_en-SOCIAL.html'), 'utf8');
+    assert.match(html, /The maximum win for this game is 5,000x the player’s play amount\./);
+    assert.doesNotMatch(html, /max_win_multiplier|crown-max-win|maxWinnings/);
   });
 
   // --amwest: the "(EN-SC amwest)" column wins when filled; otherwise the
